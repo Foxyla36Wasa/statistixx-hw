@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>HW1</title>
+<style>
+body{font:14px monospace;max-width:960px;margin:1em auto;padding:0 1em}
+input{width:4em}
+pre{white-space:pre-wrap}
+canvas{border:1px solid #aaa;max-width:100%;height:auto;margin:2px}
+</style>
+<script src="../localisation.js"></script>
+
+<p><a href="../hw1/">HW1</a> | <a href="../hw2/">HW2</a> |
+<select id=lang><option value=en>ENG</option><option value=it>ITA</option></select>
+<button id=dl data-t=dl></button></p>
+
+<h3 data-t=h1></h3>
+<p>
+y^2 = x^3 + <input id=a value=0>x + <input id=b value=7> (mod <input id=p value=17>)<br>
+G = (<input id=gx value=1>, <input id=gy value=5>) <button id=rnd data-t=rnd></button><br>
+k = <input id=k value=6>
+<select id=mode><option value=add>G, 2G, ..., kG</option><option value=dbl>double-and-add</option></select>
+<button id=run data-t=run></button> <span data-t=delay></span> <input id=ms type=range min=0 max=1500 value=500 style="width:8em">
+</p>
+<canvas id=c width=520 height=520></canvas>
+<p data-t=legend></p>
+<p data-t=curveNote></p>
+<pre id=out></pre>
+
+<h3 data-t=statsH></h3>
+<canvas id=s1></canvas><canvas id=s2></canvas><canvas id=s3></canvas><canvas id=s4></canvas><canvas id=s5></canvas>
+<pre id=st></pre>
+
+<h3 data-t=notesH></h3>
+<div data-t=notes></div>
+
+<script>
+const $ = id => document.getElementById(id)
+const W = 520, M = 36
+let p, a, b, G, curve, busy = 0, anim = false, res
+
+let lang = 'en'
+try { lang = localStorage.getItem('lang') || 'en' } catch (e) {}
+const tr = () => LOC[lang].hw1
+
+function texts() {
+  document.documentElement.lang = lang
+  document.title = tr().title
+  $('lang').value = lang
+  document.querySelectorAll('[data-t]').forEach(e => e.innerHTML = tr()[e.dataset.t])
+}
+
+const md = n => (n % p + p) % p
+const on = P => md(P[1] * P[1] - P[0] ** 3 - a * P[0] - b) == 0
+const fmt = P => P ? `(${P[0]}, ${P[1]})` : 'O'
+const nm = i => i == 1 ? 'G' : i + 'G'
+const sum = v => v.reduce((s, x) => s + x, 0)
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+function prime(n) {
+  for (let i = 2; i * i <= n; i++) if (n % i == 0) return false
+  return n > 2
+}
+
+function inv(n) {
+  let [r, s, x, y] = [md(n), p, 1, 0]
+  while (s) { const q = Math.floor(r / s); [r, s, x, y] = [s, r - q * s, y, x - q * y] }
+  return md(x)
+}
+
+function slope(P, Q) {
+  if (P[0] != Q[0]) return md(md(Q[1] - P[1]) * inv(Q[0] - P[0]))
+  if (md(P[1] + Q[1]) == 0) return null
+  return md(md(3 * P[0] * P[0] + a) * inv(2 * P[1]))
+}
+
+function add(P, Q) {
+  if (!P || !Q) return P || Q
+  const l = slope(P, Q)
+  if (l === null) return null
+  const x = md(l * l - P[0] - Q[0])
+  return [x, md(l * (P[0] - x) - P[1])]
+}
+
+function points() {
+  const sq = Array.from({length: p}, () => []), pts = []
+  for (let y = 0; y < p; y++) sq[y * y % p].push(y)
+  for (let x = 0; x < p; x++) for (const y of sq[md(x ** 3 + a * x + b)]) pts.push([x, y])
+  return pts
+}
+
+function steps(k, mode) {
+  const S = [{i: 1, R: G}], last = () => S[S.length - 1]
+  const push = (i, P, Q, op) => S.push({i, P, Q, op, R: add(P, Q)})
+  if (mode == 'add') while (last().i < k) push(last().i + 1, last().R, G, nm(last().i) + ' + G')
+  else for (const bit of k.toString(2).slice(1)) {
+    push(2 * last().i, last().R, last().R, '2 * ' + nm(last().i))
+    if (bit == '1') push(last().i + 1, last().R, G, nm(last().i) + ' + G')
+  }
+  return S
+}
+
+function frame(S, j, ph) {
+  const g = $('c').getContext('2d'), s = (W - 2 * M) / p, r = Math.min(6, Math.max(1.5, s / 4))
+  const X = x => M + (x + .5) * s, Y = y => W - M - (y + .5) * s
+  const dot = (P, col, txt, rr = r) => {
+    g.fillStyle = col
+    g.beginPath(); g.arc(X(P[0]), Y(P[1]), rr, 0, 7); g.fill()
+    if (txt && p < 60) g.fillText(txt, X(P[0]) + rr + 2, Y(P[1]) - rr)
+  }
+  g.clearRect(0, 0, W, W)
+  g.font = '11px monospace'; g.fillStyle = '#000'; g.strokeStyle = '#aaa'
+  g.strokeRect(M, M, W - 2 * M, W - 2 * M)
+  for (let v = 0; v < p; v += Math.ceil(p / (p < 100 ? 20 : 8))) { g.fillText(v, X(v) - 3, W - M + 14); g.fillText(v, 2, Y(v) + 4) }
+  curve.forEach(P => dot(P, '#888'))
+  const t = S[j]
+  S.slice(0, t ? j : j - 1).forEach(u => u.R && dot(u.R, '#000', nm(u.i)))
+  g.fillStyle = '#000'
+  if (!t) {
+    const q = S[j - 1]
+    g.fillText(q.R ? tr().canvasQ(nm(q.i), fmt(q.R)) : tr().canvasO(nm(q.i)), M, 16)
+    return q.R && dot(q.R, 'red', 'Q = ' + nm(q.i), r + 2)
+  }
+  const l = t.P && t.Q ? slope(t.P, t.Q) : undefined
+  g.fillText(nm(t.i) + ' = ' + t.op + (ph > 2 ? ' = ' + fmt(t.R) : ''), M, 16)
+  if (ph > 0 && l !== undefined) for (let v = 0; v < p; v++) dot(l === null ? [t.P[0], v] : [v, md(l * (v - t.P[0]) + t.P[1])], 'rgba(0,120,255,.5)', '', r / 2)
+  if (t.P) dot(t.P, 'blue')
+  if (t.Q) dot(t.Q, 'blue')
+  if (ph > 1 && t.R && l !== undefined) dot([t.R[0], md(-t.R[1])], 'orange', '-' + nm(t.i))
+  if (ph > 2 && t.R) {
+    g.setLineDash([3, 3]); g.strokeStyle = 'red'
+    g.beginPath(); g.moveTo(X(t.R[0]), Y(md(-t.R[1]))); g.lineTo(X(t.R[0]), Y(t.R[1])); g.stroke()
+    g.setLineDash([])
+    dot(t.R, 'red', nm(t.i))
+  }
+}
+
+async function animate(S) {
+  const id = ++busy
+  anim = true
+  if (+$('ms').value) for (let j = 1; j < S.length; j++) for (let ph = 0; ph < 4; ph++) {
+    frame(S, j, ph)
+    await sleep(+$('ms').value)
+    if (id != busy) return
+  }
+  anim = false
+  frame(S, S.length)
+}
+
+function bars(id, title, v, ref, top) {
+  const c = $(id), g = c.getContext('2d'), H = c.height - 18, bw = c.width / v.length
+  top = top || Math.max(...v, ...ref)
+  g.clearRect(0, 0, c.width, c.height)
+  g.font = '11px monospace'; g.fillStyle = '#000'; g.fillText(title, 3, 12)
+  v.forEach((y, i) => g.fillRect(i * bw, c.height - y / top * H, Math.max(bw - 1, 1), y / top * H))
+  g.strokeStyle = 'red'; g.beginPath()
+  ref.forEach((y, i) => g.lineTo((i + .5) * bw, c.height - y / top * H))
+  g.stroke()
+}
+
+function dots(id, title, pts, xmax, ymax) {
+  const c = $(id), g = c.getContext('2d'), H = c.height - 18, z = pts.length < 200 ? 4 : 2
+  g.clearRect(0, 0, c.width, c.height)
+  g.font = '11px monospace'; g.fillStyle = '#000'; g.fillText(title, 3, 12)
+  pts.forEach(([x, y]) => g.fillRect(x / xmax * (c.width - z), c.height - z - y / ymax * (H - z), z, z))
+}
+
+function corr(u, v) {
+  const mu = sum(u) / u.length, mv = sum(v) / v.length
+  let uv = 0, uu = 0, vv = 0
+  u.forEach((x, i) => { uv += (x - mu) * (v[i] - mv); uu += (x - mu) ** 2; vv += (v[i] - mv) ** 2 })
+  return (uv / Math.sqrt(uu * vv)).toFixed(3)
+}
+
+function stats(T) {
+  const n = T.length, K = T.slice(1), ks = K.map((P, i) => i + 1), xs = K.map(P => P[0]), ys = K.map(P => P[1])
+  if (n < 4) return $('st').textContent = tr().few(n)
+  const B = (p - 1).toString(2).length, nb = Math.min(p, 32), E = (n - 1) / nb
+  const hist = v => v.reduce((h, z) => (h[Math.floor(z * nb / p)]++, h), Array(nb).fill(0))
+  const chi = h => sum(h.map(o => (o - E) ** 2 / E)).toFixed(1)
+  const ones = v => Array.from({length: B}, (_, j) => v.filter(z => z >> j & 1).length / v.length)
+  const pc = v => v.toString(2).replace(/0/g, '').length
+  const av = Array(B + 1).fill(0)
+  for (let k = 1; k < n; k++) for (let j = 0; 1 << j < n; j++) {
+    const k2 = k ^ 1 << j
+    if (k2 && k2 < n) av[pc(xs[k - 1] ^ xs[k2 - 1])]++
+  }
+  const tot = sum(av), bin = [tot / 2 ** B]
+  for (let d = 0; d < B; d++) bin.push(bin[d] * (B - d) / (d + 1))
+  const hx = hist(xs), hy = hist(ys), ox = ones(xs), oy = ones(ys)
+  dots('s1', tr().s1, K.map((P, i) => [i + 1, P[0]]), n, p)
+  bars('s2', tr().s2, hx, hx.map(() => E))
+  bars('s3', tr().s3, hy, hy.map(() => E))
+  bars('s4', tr().s4(B), ox, ox.map(() => .5), 1)
+  bars('s5', tr().s5, av, bin)
+  $('st').textContent = [
+    tr().stPoints(n - 1, new Set(xs).size, new Set(ys).size),
+    tr().stChi(nb, chi(hx), chi(hy)),
+    `${tr().stCorr}  k,x ${corr(ks, xs)}  k,y ${corr(ks, ys)}  x,y ${corr(xs, ys)}`,
+    tr().stOnes((100 * sum(ox) / B).toFixed(1), (100 * sum(oy) / B).toFixed(1)),
+    tr().stFlip((sum(av.map((c, d) => c * d)) / tot).toFixed(2), B)
+  ].join('\n')
+}
+
+function show() {
+  if (!res) return
+  if (res.err) { $('out').textContent = res.err(); $('st').textContent = ''; return }
+  const {S, k, n, N, Q, j, many} = res
+  $('out').textContent = [
+    tr().curve(N, fmt(G), n),
+    tr().key(k) + (many ? tr().many : ''), '',
+    ...S.map(t => nm(t.i).padStart(8) + ' = ' + fmt(t.R).padEnd(16) + (t.op || '')),
+    '', tr().pub(k, fmt(Q)),
+    Q ? tr().brute(nm(j), j, n) : tr().zero(n)
+  ].join('\n')
+}
+
+function go(pick) {
+  busy++; anim = false
+  p = +$('p').value; a = +$('a').value; b = +$('b').value
+  G = [+$('gx').value, +$('gy').value]
+  let k = +$('k').value, mode = $('mode').value, many = false
+  const err = f => { res = {err: f}; show() }
+  if (![p, a, b, k].every(Number.isSafeInteger)) return err(() => tr().errInt)
+  if (!prime(p) || p > 99999) return err(() => tr().errPrime)
+  a = md(a); b = md(b); G = G.map(md)
+  if (md(4 * a ** 3 + 27 * b * b) == 0) return err(() => tr().errSing)
+  curve = points()
+  if (pick) {
+    const ok = curve.filter(P => P[1] && (P[0] != G[0] || P[1] != G[1]))
+    if (ok.length) G = ok[Math.floor(Math.random() * ok.length)]
+    $('gx').value = G[0]; $('gy').value = G[1]
+  }
+  if (!on(G)) return err(() => tr().errG(fmt(G)))
+  if (k < 1) return err(() => tr().errK)
+  if (mode == 'add' && k > 500) { mode = 'dbl'; many = true }
+  const T = [null]
+  for (let R = G; R; R = add(R, G)) T.push(R)
+  const n = T.length, S = steps(k, mode), Q = S[S.length - 1].R
+  const j = T.findIndex(P => P && Q && P[0] == Q[0] && P[1] == Q[1])
+  res = {S, T, k, n, N: curve.length + 1, Q, j, many}
+  show()
+  animate(S)
+  stats(T)
+}
+
+$('lang').onchange = () => {
+  lang = $('lang').value
+  try { localStorage.setItem('lang', lang) } catch (e) {}
+  texts(); show()
+  if (res && !res.err) { stats(res.T); if (!anim) frame(res.S, res.S.length) }
+}
+// the downloaded page loads localisation.js from its own folder
+$('dl').onclick = async () => {
+  const save = (blob, name) => { const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = name; l.click() }
+  const page = (await (await fetch(location.href)).text()).replace('../localisation.js', 'localisation.js')
+  save(new Blob([page], {type: 'text/html'}), 'hw1.html')
+  save(await (await fetch('../localisation.js')).blob(), 'localisation.js')
+}
+
+for (const id of ['a', 'b', 'p', 'gx', 'gy', 'k', 'mode']) $(id).onchange = () => go()
+$('run').onclick = () => go()
+$('rnd').onclick = () => go(true)
+texts()
+go()
+</script>
