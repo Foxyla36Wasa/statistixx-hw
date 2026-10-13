@@ -21,7 +21,7 @@ y^2 = x^3 + <input id=a value=0>x + <input id=b value=7> (mod <input id=p value=
 G = (<input id=gx value=1>, <input id=gy value=5>) <button id=rnd data-t=rnd></button><br>
 k = <input id=k value=6>
 <select id=mode><option value=add>G, 2G, ..., kG</option><option value=dbl>double-and-add</option></select>
-<button id=run data-t=run></button> <span data-t=delay></span> <input id=ms type=range min=0 max=1500 value=500 style="width:8em">
+<button id=run data-t=run></button>
 </p>
 <canvas id=c width=520 height=520></canvas>
 <p data-t=legend></p>
@@ -37,7 +37,7 @@ k = <input id=k value=6>
 
 <script>
 const $ = id => document.getElementById(id)
-const W = 520, M = 36
+const W = 520, M = 36, DELAY = 500
 let p, a, b, G, curve, busy = 0, anim = false, res
 
 let lang = 'en'
@@ -139,9 +139,9 @@ function frame(S, j, ph) {
 async function animate(S) {
   const id = ++busy
   anim = true
-  if (+$('ms').value) for (let j = 1; j < S.length; j++) for (let ph = 0; ph < 4; ph++) {
+  for (let j = 1; j < S.length; j++) for (let ph = 0; ph < 4; ph++) {
     frame(S, j, ph)
-    await sleep(+$('ms').value)
+    await sleep(DELAY)
     if (id != busy) return
   }
   anim = false
