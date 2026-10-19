@@ -137,6 +137,128 @@ Keccak-256 turns the public key into a fixed size address, and EIP-55 catches ty
     stChi: c => `hex digits: chi2 = ${c} (15 degrees of freedom, about 15 if uniform)`,
     stCons: m => `consecutive keys: ${m} of 160 address bits change on average`,
     stAval: m => `Keccak-256, 1 of 512 input bits flipped: ${m} of 256 output bits change on average`
+  },
+  hw2b: {
+    title: 'HW2-B - EC encryption and Caesar',
+    dl: 'download',
+    h1: 'HW2-B - elliptic-curve encryption and the Caesar cipher, and how both are broken',
+    msg: 'message',
+    msgNote: 'only the letters A-Z are encrypted, everything else is left as it is',
+    hEc: '1. elliptic-curve encryption on secp256k1 (ElGamal style)',
+    dKey: 'private key d =',
+    dNote: '(kept small on purpose, see part 5), key space 2^',
+    pubKey: 'public key Q = dG',
+    encrypt: 'encrypt',
+    encNote: '(a new random ephemeral r is drawn every time)',
+    hCaesar: '2. Caesar cipher',
+    kKey: 'key k =',
+    kNote: '(shift, 0 to 25)',
+    hFreq: '3. letter frequencies',
+    freqNote: 'black: the text, red line: English. Caesar only moves the shape of the plaintext distribution, the EC scheme makes it flat.',
+    hCrack: '4. breaking the Caesar cipher with statistics',
+    useFirst: 'use the first',
+    useFirst2: 'letters of the Caesar ciphertext.',
+    method: 'method',
+    mChi: 'letter frequency (chi-square)',
+    mBg: 'bigram score',
+    mEx: 'exhaustive (show all 26)',
+    run: 'run',
+    howMany: 'how many letters are needed: for each length, the fraction of random samples of the ciphertext where each method returns the real key',
+    hAttack: '5. breaking the EC scheme through the small key space',
+    mBf: 'brute force (try d = 1, 2, 3, ...)',
+    mBsgs: 'baby-step giant-step (about the square root of the key space)',
+    attack: 'attack',
+    notesH: 'notes',
+    notes: `<p>The default private key is d = 50123 in a key space of 2^16, the default Caesar key is k = 7.
+Both ciphers shift the letters A-Z and leave everything else unchanged. Caesar adds the same number to every letter,
+the EC scheme adds a different number to each letter, taken from a keystream that only the two key holders can compute.</p>
+<p>1. The EC scheme works like ElGamal (a simplified ECIES) on the real secp256k1 curve, with the same point arithmetic in BigInt as HW2.
+The private key is a number d, the public key is the point Q = dG. Only d has to stay secret, Q can be published.
+Here d is kept small on purpose, so that the attack in part 5 can run.
+<br>To encrypt, which needs only Q: draw a random ephemeral r, send R = rG in clear and compute the shared secret S = rQ = r(dG) = (rd)G.
+The x coordinate of S is the seed of the keystream that is added to the letters.
+<br>To decrypt, which needs d: compute S = dR = d(rG) = (rd)G from the received R. It is the same point, so the seed and the keystream are the same,
+and the keystream is subtracted instead of added.
+<br>Everyone sees G, Q and R, but only d or r gives S, and finding d from Q means solving the elliptic-curve discrete logarithm.
+A new r is drawn for every message, so encrypting the same text twice gives a different R and a different ciphertext (press encrypt twice to see it).</p>
+<p>2. The Caesar cipher is c = (m + k) mod 26 with one key k between 0 and 25, and decryption subtracts k. The whole message uses the same key.</p>
+<p>3. Similarities and differences. Both schemes add a shift to each letter mod 26 and decrypt by subtracting it, so letter by letter the two procedures are the same.
+<br>The keys work differently. Caesar is symmetric: the same k encrypts and decrypts, so it must stay secret on both sides.
+The EC scheme is asymmetric: anyone can encrypt with the public Q, only the owner of d can decrypt.
+<br>The key spaces are very different. Caesar has 26 keys, 25 of them useful. The EC private key can be any number in [1, n) with n about 2^256,
+and the ephemeral r changes the whole sequence of shifts at every message.
+<br>The histograms show the statistical difference. Caesar applies one shift, so the ciphertext keeps the English letter distribution rotated by k:
+the bars keep their shape and only move sideways. The EC keystream applies an almost random shift at every position, so it behaves like a
+polyalphabetic cipher: the output is almost flat and does not match the English line anywhere.
+A flat distribution removes exactly the information a frequency attack needs.</p>
+<p>4. The attack on Caesar tries all 26 shifts and gives each decryption a score against English.
+Chi-square compares the letter counts of the decryption with the English frequencies, and the real key gives the smallest chi-square (drawn as the tallest bar).
+Bigram scoring adds up the frequency of each pair of consecutive letters, which carries much more structure than single letters.
+Exhaustive search only prints the 26 candidates and leaves the choice to a person.
+<br>Both reference tables come from a corpus. For single letters the standard English frequencies are used: a table built from the 537 thousand letters
+of Pride and Prejudice gives the same results within the measurement noise, so a larger corpus does not help there.
+For bigrams the corpus matters: the full 26 x 26 table of pair frequencies from the same book, quantized to 62 levels and stored as a 676 character string in the code,
+works much better than a short hand-written list of common pairs. Measured on texts not used to build it (Moby Dick and Alice in Wonderland),
+the recovery rate goes from about 50% to 71% at 5 letters, from 68% to 91% at 8 letters and from 83% to 98% at 12 letters.
+Twenty thousand letters of corpus already give the same quality as half a million.
+<br>The second plot shows how much text is needed. On the default message (403 letters, 400 random samples per length) chi-square finds the key
+in 35% of the cases with 3 letters, 47% with 5, 69% with 8, 88% with 12, 96% with 20 and always from about 30 letters.
+The bigram score is better on short texts: 52% with 3 letters, 66% with 5, 91% with 8, 98% with 12 and always from 20. Random guessing would give 1/26, about 4%.
+Chi-square needs more text because a short sample does not yet have the letter distribution of English, while the bigram table recognises pairs like QU or TH in a few letters.
+The attack also assumes ordinary English text: a text made of one repeated letter, a pangram or a text in another language can defeat it.
+In any case Caesar is never secure, because the 26 keys can always be tried by hand: the statistics only choose the readable one automatically.</p>
+<p>5. The weakness of the EC scheme is not the curve but the small range of d, so the key can be searched.
+Brute force tries d = 1, 2, 3, ..., one point addition each, until dG equals Q. Measured in Chrome on the PC used for this homework, each addition takes about 20 microseconds,
+so the default d = 50123 is found in about 1 second and a key space of 2^18 in at most 5 seconds, while 2^20 would take about 20 seconds: for this reason the page limits brute force to 2^18.
+Baby-step giant-step does the same search in about 2 sqrt(key space) steps using a table: about 10 ms for 2^16, 60 ms for 2^21 and less than 3 seconds for 2^32,
+so it reaches much larger key spaces. Once d is known, the message is decrypted with it.
+<br>The two attacks are different in nature. Breaking Caesar is statistical inference: it reads a pattern that the plaintext left in the ciphertext,
+and needs enough text for that pattern to appear. Breaking the EC scheme is a key search: it ignores the ciphertext and only tests keys against the public Q,
+which is why it works even though the EC ciphertext is statistically flat. A flat output hides the plaintext, not the key.
+One attack exploits a non-uniform plaintext, the other a small key space.
+<br>With a properly configured curve neither attack scales. With d anywhere in [1, 2^256) brute force needs about 2^256 additions,
+and baby-step giant-step about 2^128 steps and 2^128 points of memory. Pollard rho, the best generic attack, also costs about 2^128 steps but with almost no memory,
+still far out of reach. The method stays the same, only the size of the space changes, and the discrete logarithm stays hard.
+This is why real secp256k1 keys use the whole range.
+<br>Finally, which weakness comes from where. Brute force and baby-step giant-step come only from the restricted key space, and a full-size d removes them.
+The design of the scheme has separate problems that a longer key would not fix. The keystream is a simple linear congruential generator, so it is predictable,
+and it is seeded with only 64 bits of x(S), so there are at most 2^64 keystreams whatever the size of d.
+There is no MAC, so a ciphertext can be modified without being noticed, and reducing the shared point to a mod 26 stream throws away almost all of it.
+A real ECIES solves these with a proper key derivation function, a real cipher and a MAC, independently of the key length.</p>`,
+    errD: 'd must be a whole number of at least 1',
+    ephem: 'ephemeral r',
+    ephemNote: '(random, discarded after encryption)',
+    sent: 'sent with the ciphertext',
+    shared: 'shared secret',
+    ct: 'ciphertext',
+    dec: 'decrypt',
+    usesD: '(uses d)',
+    usesK: '(uses k)',
+    f1: 'plaintext',
+    f2: 'Caesar ciphertext',
+    f3: 'EC ciphertext',
+    chiTitle: L => `English fit of each shift with chi-square (tallest = guessed key), ${L} letters`,
+    bgTitle: L => `bigram score of each shift (tallest = guessed key), ${L} letters`,
+    exHead: 'all 26 shifts, pick the readable one:',
+    guessed: k => `guessed key k = ${k}`,
+    ok: '  (correct)',
+    wrong: k => `  (wrong, real k = ${k})`,
+    plain: 'plaintext',
+    cmp: (a, b, k) => `chi-square: k = ${a},  bigram: k = ${b},  real k = ${k}`,
+    sucTitle: n => `fraction of ${n} random samples where the key is recovered`,
+    chiName: 'chi-square',
+    bgName: 'bigram',
+    letters: 'letters',
+    space: (B, b) => `key space 2^${B} = ${b}`,
+    tooBf: 'too large for brute force in the browser (limit 2^18), use baby-step giant-step',
+    tooBs: 'too large to run in the browser (limit 2^32), see the notes on Pollard rho',
+    running: 'running...',
+    notFound: B => `not found below 2^${B} (the real d is larger than the key space you set)`,
+    found: d => `recovered private key d = ${d}`,
+    matches: '  (matches)',
+    tookBf: (ms, d) => `took ${ms} ms, about ${d} point additions`,
+    tookBs: (ms, s, b) => `took ${ms} ms, about ${s} steps instead of ${b}`,
+    decWith: 'decrypted with the recovered d:'
   }
 },
 it: {
@@ -276,6 +398,128 @@ Keccak-256 trasforma la chiave pubblica in un indirizzo di lunghezza fissa, ed E
     stChi: c => `cifre esadecimali: chi2 = ${c} (15 gradi di libertà, circa 15 se uniforme)`,
     stCons: m => `chiavi consecutive: in media cambiano ${m} bit dell'indirizzo su 160`,
     stAval: m => `Keccak-256, 1 dei 512 bit di input invertito: in media cambiano ${m} bit di output su 256`
+  },
+  hw2b: {
+    title: 'HW2-B - cifratura EC e Cesare',
+    dl: 'scarica',
+    h1: 'HW2-B - cifratura su curva ellittica e cifrario di Cesare, e come si rompono',
+    msg: 'messaggio',
+    msgNote: 'vengono cifrate solo le lettere A-Z, tutto il resto resta com\'è',
+    hEc: '1. cifratura su curva ellittica secp256k1 (stile ElGamal)',
+    dKey: 'chiave privata d =',
+    dNote: '(tenuta piccola di proposito, vedi parte 5), spazio delle chiavi 2^',
+    pubKey: 'chiave pubblica Q = dG',
+    encrypt: 'cifra',
+    encNote: '(ogni volta viene estratto un nuovo r effimero casuale)',
+    hCaesar: '2. cifrario di Cesare',
+    kKey: 'chiave k =',
+    kNote: '(shift, da 0 a 25)',
+    hFreq: '3. frequenza delle lettere',
+    freqNote: 'nero: il testo, linea rossa: l\'inglese. Cesare sposta soltanto la forma della distribuzione del testo in chiaro, lo schema EC la rende piatta.',
+    hCrack: '4. rompere il cifrario di Cesare con la statistica',
+    useFirst: 'usa le prime',
+    useFirst2: 'lettere del cifrato di Cesare.',
+    method: 'metodo',
+    mChi: 'frequenza delle lettere (chi-quadro)',
+    mBg: 'punteggio dei bigrammi',
+    mEx: 'ricerca esaustiva (mostra tutti i 26)',
+    run: 'esegui',
+    howMany: 'quante lettere servono: per ogni lunghezza, la frazione di campioni casuali del cifrato in cui ciascun metodo trova la chiave reale',
+    hAttack: '5. rompere lo schema EC sfruttando lo spazio delle chiavi ridotto',
+    mBf: 'forza bruta (prova d = 1, 2, 3, ...)',
+    mBsgs: 'baby-step giant-step (circa la radice quadrata dello spazio delle chiavi)',
+    attack: 'attacca',
+    notesH: 'note',
+    notes: `<p>La chiave privata di default è d = 50123 in uno spazio delle chiavi di 2^16, la chiave di Cesare di default è k = 7.
+Entrambi i cifrari spostano le lettere A-Z e lasciano invariato tutto il resto. Cesare somma lo stesso numero a ogni lettera,
+lo schema EC somma un numero diverso a ogni lettera, preso da un keystream che solo chi ha le chiavi può calcolare.</p>
+<p>1. Lo schema EC funziona come ElGamal (un ECIES semplificato) sulla vera curva secp256k1, con la stessa aritmetica dei punti in BigInt dell'HW2.
+La chiave privata è un numero d, la chiave pubblica è il punto Q = dG. Solo d deve restare segreta, Q si può pubblicare.
+Qui d è tenuta piccola di proposito, perché l'attacco della parte 5 possa funzionare.
+<br>Per cifrare, e basta Q: si estrae un r effimero casuale, si invia R = rG in chiaro e si calcola il segreto condiviso S = rQ = r(dG) = (rd)G.
+La coordinata x di S è il seed del keystream che viene sommato alle lettere.
+<br>Per decifrare serve d: dal R ricevuto si calcola S = dR = d(rG) = (rd)G. È lo stesso punto, quindi seed e keystream sono gli stessi,
+e il keystream viene sottratto invece che sommato.
+<br>Tutti vedono G, Q e R, ma solo d o r permettono di ottenere S, e ricavare d da Q significa risolvere il logaritmo discreto su curva ellittica.
+Per ogni messaggio si estrae un nuovo r, quindi cifrando due volte lo stesso testo si ottengono un R e un cifrato diversi (premi due volte cifra per vederlo).</p>
+<p>2. Il cifrario di Cesare è c = (m + k) mod 26 con una sola chiave k tra 0 e 25, e per decifrare si sottrae k. Tutto il messaggio usa la stessa chiave.</p>
+<p>3. Somiglianze e differenze. Entrambi gli schemi sommano uno shift a ogni lettera mod 26 e decifrano sottraendolo, quindi lettera per lettera le due procedure sono uguali.
+<br>Le chiavi funzionano in modo diverso. Cesare è simmetrico: la stessa k cifra e decifra, quindi deve restare segreta da entrambe le parti.
+Lo schema EC è asimmetrico: chiunque può cifrare con la Q pubblica, solo chi possiede d può decifrare.
+<br>Gli spazi delle chiavi sono molto diversi. Cesare ha 26 chiavi, di cui 25 utili. La chiave privata EC può essere qualsiasi numero in [1, n) con n circa 2^256,
+e l'r effimero cambia l'intera sequenza di shift a ogni messaggio.
+<br>Gli istogrammi mostrano la differenza statistica. Cesare applica un solo shift, quindi il cifrato conserva la distribuzione delle lettere dell'inglese ruotata di k:
+le barre mantengono la loro forma e si spostano soltanto di lato. Il keystream EC applica uno shift quasi casuale a ogni posizione, quindi si comporta come un
+cifrario polialfabetico: l'output è quasi piatto e non coincide in nessun punto con la linea dell'inglese.
+Una distribuzione piatta toglie proprio l'informazione di cui ha bisogno un attacco basato sulle frequenze.</p>
+<p>4. L'attacco a Cesare prova tutti i 26 shift e dà a ogni decifratura un punteggio rispetto all'inglese.
+Il chi-quadro confronta i conteggi delle lettere della decifratura con le frequenze dell'inglese, e la chiave giusta dà il chi-quadro più piccolo (disegnato come la barra più alta).
+Il punteggio dei bigrammi somma la frequenza di ogni coppia di lettere consecutive, che contiene molta più struttura delle lettere singole.
+La ricerca esaustiva stampa soltanto i 26 candidati e lascia la scelta a una persona.
+<br>Entrambe le tabelle di riferimento vengono da un corpus. Per le lettere singole si usano le frequenze standard dell'inglese: una tabella costruita sui 537 mila caratteri
+di Pride and Prejudice dà gli stessi risultati entro il rumore della misura, quindi un corpus più grande lì non aiuta.
+Per i bigrammi invece il corpus conta: la tabella completa 26 x 26 delle frequenze delle coppie dello stesso libro, quantizzata su 62 livelli e salvata come stringa di 676 caratteri nel codice,
+funziona molto meglio di una breve lista di coppie comuni scritta a mano. Misurata su testi non usati per costruirla (Moby Dick e Alice nel paese delle meraviglie),
+la percentuale di successo passa da circa 50% a 71% con 5 lettere, da 68% a 91% con 8 lettere e da 83% a 98% con 12 lettere.
+Ventimila caratteri di corpus danno già la stessa qualità di mezzo milione.
+<br>Il secondo grafico mostra quanto testo serve. Sul messaggio di default (403 lettere, 400 campioni casuali per lunghezza) il chi-quadro trova la chiave
+nel 35% dei casi con 3 lettere, 47% con 5, 69% con 8, 88% con 12, 96% con 20 e sempre da circa 30 lettere in su.
+Il punteggio dei bigrammi è migliore sui testi corti: 52% con 3 lettere, 66% con 5, 91% con 8, 98% con 12 e sempre da 20 in su. Tirando a caso si otterrebbe 1/26, circa il 4%.
+Il chi-quadro ha bisogno di più testo perché un campione corto non ha ancora la distribuzione delle lettere dell'inglese, mentre la tabella dei bigrammi riconosce coppie come QU o TH anche in poche lettere.
+L'attacco presuppone inoltre un normale testo inglese: un testo fatto di una sola lettera ripetuta, un pangramma o un testo in un'altra lingua possono ingannarlo.
+In ogni caso Cesare non è mai sicuro, perché le 26 chiavi si possono sempre provare a mano: la statistica serve solo a scegliere in automatico quella leggibile.</p>
+<p>5. La debolezza dello schema EC non è la curva ma l'intervallo ridotto di d, quindi la chiave si può cercare.
+La forza bruta prova d = 1, 2, 3, ..., una somma di punti per volta, finché dG non coincide con Q. Misurando in Chrome sul PC usato per l'homework, ogni somma richiede circa 20 microsecondi,
+quindi la d = 50123 di default si trova in circa 1 secondo e uno spazio di 2^18 in al massimo 5 secondi, mentre 2^20 richiederebbe circa 20 secondi: per questo la pagina limita la forza bruta a 2^18.
+Baby-step giant-step fa la stessa ricerca in circa 2 sqrt(spazio delle chiavi) passi usando una tabella: circa 10 ms per 2^16, 60 ms per 2^21 e meno di 3 secondi per 2^32,
+quindi arriva a spazi delle chiavi molto più grandi. Una volta trovata d, il messaggio si decifra con quella.
+<br>I due attacchi sono di natura diversa. Rompere Cesare è inferenza statistica: legge una regolarità che il testo in chiaro ha lasciato nel cifrato,
+e richiede abbastanza testo perché questa regolarità emerga. Rompere lo schema EC è una ricerca della chiave: ignora il cifrato e confronta le chiavi solo con la Q pubblica,
+ed è per questo che funziona anche se il cifrato EC è statisticamente piatto. Un output piatto nasconde il testo in chiaro, non la chiave.
+Un attacco sfrutta un testo in chiaro non uniforme, l'altro uno spazio delle chiavi piccolo.
+<br>Con una curva configurata correttamente nessuno dei due attacchi è praticabile. Con d qualsiasi in [1, 2^256) la forza bruta richiede circa 2^256 somme,
+e baby-step giant-step circa 2^128 passi e 2^128 punti di memoria. Pollard rho, il miglior attacco generico, costa anch'esso circa 2^128 passi ma quasi senza memoria,
+e resta comunque fuori portata. Il metodo è lo stesso, cambia solo la dimensione dello spazio, e il logaritmo discreto resta difficile.
+Per questo le vere chiavi secp256k1 usano tutto l'intervallo.
+<br>Infine, da dove viene ciascuna debolezza. Forza bruta e baby-step giant-step dipendono solo dallo spazio delle chiavi ridotto, e una d di dimensione piena le elimina.
+Il design dello schema ha problemi diversi che una chiave più lunga non risolve. Il keystream è un semplice generatore lineare congruenziale, quindi è prevedibile,
+e il suo seed usa solo 64 bit di x(S), quindi esistono al massimo 2^64 keystream qualunque sia la dimensione di d.
+Non c'è un MAC, quindi un cifrato può essere modificato senza che ci si accorga, e ridurre il punto condiviso a uno stream mod 26 ne butta via quasi tutto.
+Un vero ECIES risolve questi problemi con una funzione di derivazione della chiave adeguata, un vero cifrario e un MAC, indipendentemente dalla lunghezza della chiave.</p>`,
+    errD: 'd deve essere un numero intero di almeno 1',
+    ephem: 'r effimero',
+    ephemNote: '(casuale, scartato dopo la cifratura)',
+    sent: 'inviato insieme al cifrato',
+    shared: 'segreto condiviso',
+    ct: 'cifrato',
+    dec: 'decifrato',
+    usesD: '(usa d)',
+    usesK: '(usa k)',
+    f1: 'testo in chiaro',
+    f2: 'cifrato con Cesare',
+    f3: 'cifrato con EC',
+    chiTitle: L => `somiglianza con l'inglese per ogni shift, chi-quadro (barra più alta = chiave scelta), ${L} lettere`,
+    bgTitle: L => `punteggio dei bigrammi per ogni shift (barra più alta = chiave scelta), ${L} lettere`,
+    exHead: 'tutti i 26 shift, scegli quello leggibile:',
+    guessed: k => `chiave trovata k = ${k}`,
+    ok: '  (corretta)',
+    wrong: k => `  (sbagliata, k reale = ${k})`,
+    plain: 'in chiaro',
+    cmp: (a, b, k) => `chi-quadro: k = ${a},  bigrammi: k = ${b},  k reale = ${k}`,
+    sucTitle: n => `frazione di ${n} campioni casuali in cui la chiave viene trovata`,
+    chiName: 'chi-quadro',
+    bgName: 'bigrammi',
+    letters: 'lettere',
+    space: (B, b) => `spazio delle chiavi 2^${B} = ${b}`,
+    tooBf: 'troppo grande per la forza bruta nel browser (limite 2^18), usa baby-step giant-step',
+    tooBs: 'troppo grande per il browser (limite 2^32), vedi le note su Pollard rho',
+    running: 'in esecuzione...',
+    notFound: B => `non trovata sotto 2^${B} (la d reale è più grande dello spazio delle chiavi impostato)`,
+    found: d => `chiave privata trovata d = ${d}`,
+    matches: '  (coincide)',
+    tookBf: (ms, d) => `${ms} ms, circa ${d} somme di punti`,
+    tookBs: (ms, s, b) => `${ms} ms, circa ${s} passi invece di ${b}`,
+    decWith: 'decifrato con la d trovata:'
   }
 }
 }

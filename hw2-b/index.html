@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>HW2-B</title>
+<style>
+body{font:14px monospace;max-width:960px;margin:1em auto;padding:0 1em}
+input{width:4em}
+textarea{width:100%;font:inherit}
+pre{white-space:pre-wrap;word-break:break-all}
+canvas{border:1px solid #aaa;max-width:100%;height:auto;margin:2px}
+</style>
+<script src="../localisation.js"></script>
+
+<p><a href="../hw1/">HW1</a> | <a href="../hw2/">HW2</a> | <a href="../hw2-b/">HW2-B</a> |
+<select id=lang><option value=en>ENG</option><option value=it>ITA</option></select>
+<button id=dl data-t=dl></button></p>
+
+<h3 data-t=h1></h3>
+<p><span data-t=msg></span><br><textarea id=msg rows=4>The morning air was cool and clear as the travelers set out along the narrow road that wound between the hills. They spoke little, for the climb was steep and the sun had not yet risen above the distant ridge. By the time they reached the old stone bridge, the valley below was full of light, and the river shone like a ribbon of silver. They rested for a while, sharing bread and quiet talk, before the long descent toward the town began. Everyone agreed that the view alone had been worth the early start.</textarea><br>
+<span data-t=msgNote></span></p>
+
+<h3 data-t=hEc></h3>
+<p><span data-t=dKey></span> <input id=d value=50123> <span data-t=dNote></span> <input id=b value=16 size=2><br>
+<span data-t=pubKey></span> <button id=enc data-t=encrypt></button> <span data-t=encNote></span></p>
+<pre id=ecout></pre>
+
+<h3 data-t=hCaesar></h3>
+<p><span data-t=kKey></span> <input id=k value=7> <span data-t=kNote></span></p>
+<pre id=cout></pre>
+
+<h3 data-t=hFreq></h3>
+<p data-t=freqNote></p>
+<canvas id=f1 width=300 height=150></canvas><canvas id=f2 width=300 height=150></canvas><canvas id=f3 width=300 height=150></canvas>
+
+<h3 data-t=hCrack></h3>
+<p><span data-t=useFirst></span> <input id=len value=200 size=4> <span data-t=useFirst2></span>
+<span data-t=method></span> <select id=meth><option value=chi data-t=mChi></option><option value=bg data-t=mBg></option><option value=ex data-t=mEx></option></select>
+<button id=ca data-t=run></button></p>
+<canvas id=chi width=620 height=150></canvas>
+<pre id=caout></pre>
+<p><span data-t=howMany></span> (k = <span id=tk></span>)</p>
+<canvas id=suc width=620 height=160></canvas>
+
+<h3 data-t=hAttack></h3>
+<p><span data-t=method></span> <select id=am><option value=bf data-t=mBf></option><option value=bsgs data-t=mBsgs></option></select>
+<button id=aa data-t=attack></button></p>
+<pre id=aout></pre>
+
+<h3 data-t=notesH></h3>
+<div data-t=notes></div>
+
+<script>
+const $ = id => document.getElementById(id)
+const EN0 = [8.2, 1.5, 2.8, 4.3, 12.7, 2.2, 2.0, 6.1, 7.0, .15, .77, 4.0, 2.4, 6.7, 7.5, 1.9, .095, 6.0, 6.3, 9.1, 2.8, .98, 2.4, .15, 2.0, .074]
+const ensum = EN0.reduce((a, x) => a + x, 0), EN = EN0.map(x => x / ensum)
+const B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+const BG = [
+'OljoFfiSlAeplvPhIrstekd9jK',
+'aD04r00EcX0iA0f00bWUi400f0',
+'k7bAoB0ne0cbE4p7TbEjb040e0',
+'oiadpdZkpTQcghlZLcjnbXh0f0',
+'shotokfmoUXqoulkZyssXlngl0',
+'jVWTjfRgjLIZbRnUChakcJY0Z0',
+'jYSQkUQmhEDeYXgRAgcgXHY0U0',
+'uWVSzUQdsMIVbRoSBZbkaIb0X0',
+'iblkkghbE4almwnXDkssKhYQ4g',
+'a000Z000400000W00000X00000',
+'VKF7iPAZe74LLdUJ4DWUG4S0P0',
+'lYVlqgQXpGZpYWkUCScgbUZ0o0',
+'naRNpVNZlKDQbSkgGjedgKY0h0',
+'lbmtrdshkUcedhrWTVmsZafPg4',
+'ehdgbrageQdjotkgIrlptenCY7',
+'iEF9lJ7Vd40hH4ig0kYcX4N0U0',
+'00000000000000000004f00000',
+'ofjkvgbhoQWfigncGgoocah0k4',
+'phhcreZqpQVdgeoiOaoslWi0Y0',
+'pfdcscVzrRTigbtbLikphOk4iN',
+'faiacRhVcBPmckOdBolmEBW4I9',
+'b000r000h00000Z004009000E0',
+'oMPNmNHno9ITVeiK4VWWFGU0I0',
+'R9W0R40ER000A09a400W90C040',
+'iddffbWfgMQZdYoaBZjjTOh0V0',
+'f000M000C00A0000000000N0TT'].join('')
+const BGV = [...BG].map(c => B62.indexOf(c))
+
+const up = s => s.toUpperCase()
+const isL = c => c >= 'A' && c <= 'Z'
+const code = c => c.charCodeAt(0) - 65
+const chr = n => String.fromCharCode(65 + ((n % 26) + 26) % 26)
+const nLet = s => [...up(s)].filter(isL).length
+const hx = n => n.toString(16)
+const cut = s => s.length > 70 ? s.slice(0, 67) + '...' : s
+
+const caesar = (txt, k) => [...up(txt)].map(c => isL(c) ? chr(code(c) + k) : c).join('')
+
+function shiftStream(txt, ks, sign) {
+  let i = 0
+  return [...up(txt)].map(c => isL(c) ? chr(code(c) + sign * ks[i++]) : c).join('')
+}
+
+const Pr = 2n ** 256n - 2n ** 32n - 977n
+const Nr = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n
+const Gp = [0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n,
+            0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n]
+const md = x => (x % Pr + Pr) % Pr
+
+function inv(x) {
+  let [r, s, u, v] = [md(x), Pr, 1n, 0n]
+  while (s) { const q = r / s;[r, s, u, v] = [s, r - q * s, v, u - q * v] }
+  return md(u)
+}
+
+function addP(A, B) {
+  if (!A || !B) return A || B
+  if (A[0] == B[0] && md(A[1] + B[1]) == 0n) return null
+  const l = A[0] == B[0] ? md(3n * A[0] * A[0] * inv(2n * A[1])) : md((B[1] - A[1]) * inv(B[0] - A[0]))
+  const x = md(l * l - A[0] - B[0])
+  return [x, md(l * (A[0] - x) - A[1])]
+}
+
+function mulP(k, Pt) {
+  let R = null
+  for (let q = Pt; k > 0n; k >>= 1n, q = addP(q, q)) if (k & 1n) R = addP(R, q)
+  return R
+}
+const mul = k => mulP(k, Gp)
+const neg = A => A && [A[0], md(-A[1])]
+const eq = (A, B) => A && B && A[0] == B[0] && A[1] == B[1]
+
+function randScalar() {
+  let x = 0n
+  for (const v of crypto.getRandomValues(new Uint8Array(32))) x = x << 8n | BigInt(v)
+  return x % Nr || 1n
+}
+
+function stream(seed, len) {
+  let st = seed % (2n ** 64n) || 1n
+  const A = 6364136223846793005n, C = 1442695040888963407n, M = 2n ** 64n, out = []
+  for (let i = 0; i < len; i++) { st = (A * st + C) % M; out.push(Number(st >> 33n & 0xffffn) % 26) }
+  return out
+}
+
+function ecEncrypt(txt, Q) {
+  const r = randScalar(), R = mul(r), S = mulP(r, Q)
+  return { r, R, S, ct: shiftStream(txt, stream(S[0], nLet(txt)), 1) }
+}
+function ecDecrypt(ct, R, d) {
+  const S = mulP(d, R)
+  return shiftStream(ct, stream(S[0], nLet(ct)), -1)
+}
+
+function brute(Q, bound) {
+  let R = null
+  for (let d = 1n; d <= bound; d++) { R = addP(R, Gp); if (eq(R, Q)) return d }
+  return null
+}
+
+function bsgs(Q, bound) {
+  const m = BigInt(Math.ceil(Math.sqrt(Number(bound))) + 1), tab = new Map()
+  let P0 = null
+  for (let j = 0n; j < m; j++) { tab.set(P0 ? P0[0] + ',' + P0[1] : 'O', j); P0 = addP(P0, Gp) }
+  const step = neg(mul(m))
+  let giant = Q
+  for (let i = 0n; i <= m + 1n; i++) {
+    const key = giant ? giant[0] + ',' + giant[1] : 'O'
+    if (tab.has(key)) { const d = i * m + tab.get(key); if (d >= 1n && d <= bound) return d }
+    giant = addP(giant, step)
+  }
+  return null
+}
+
+const counts = txt => { const c = Array(26).fill(0); for (const ch of up(txt)) if (isL(ch)) c[code(ch)]++; return c }
+
+function chi2(txt) {
+  const c = counts(txt), tot = c.reduce((a, b) => a + b, 0) || 1
+  return c.reduce((x, o, i) => x + (o - tot * EN[i]) ** 2 / (tot * EN[i]), 0)
+}
+function allChi(ct) { return [...Array(26)].map((_, s) => chi2(caesar(ct, -s))) }
+const argmin = v => v.indexOf(Math.min(...v))
+const argmax = v => v.indexOf(Math.max(...v))
+
+function bigram(txt) {
+  const t = [...up(txt)].filter(isL).join('')
+  let sc = 0
+  for (let i = 0; i + 1 < t.length; i++) sc += BGV[code(t[i]) * 26 + code(t[i + 1])]
+  return sc
+}
+const freqKey = ct => argmin(allChi(ct))
+const bgKey = ct => argmax([...Array(26)].map((_, s) => bigram(caesar(ct, -s))))
+
+let lang = 'en'
+try { lang = localStorage.getItem('lang') || 'en' } catch (e) {}
+const tr = () => LOC[lang].hw2b
+
+function texts() {
+  document.documentElement.lang = lang
+  document.title = tr().title
+  $('lang').value = lang
+  document.querySelectorAll('[data-t]').forEach(e => e.innerHTML = tr()[e.dataset.t])
+}
+
+// outputs and charts are kept as functions of the text, so they can be redrawn in the other language
+const out = {}, charts = {}
+const show = id => $(id).textContent = (out[id] || []).map(f => typeof f == 'function' ? f(tr()) : f).join('\n')
+const put = (id, lines) => { out[id] = lines; show(id) }
+const plot = (id, f) => { charts[id] = f; f(tr()) }
+
+let M = {}
+
+function bars(id, title, v, ref, top, hi) {
+  const c = $(id), g = c.getContext('2d'), H = c.height - 18, bw = c.width / v.length
+  top = top || Math.max(...v, ...(ref || [0])) || 1
+  g.clearRect(0, 0, c.width, c.height); g.font = '11px monospace'
+  v.forEach((y, i) => { g.fillStyle = i === hi ? 'red' : '#000'; g.fillRect(i * bw, c.height - y / top * H, Math.max(bw - 1, 1), y / top * H) })
+  g.fillStyle = '#000'; g.fillText(title, 3, 12)
+  if (ref) { g.strokeStyle = 'red'; g.beginPath(); ref.forEach((y, i) => g.lineTo((i + .5) * bw, c.height - y / top * H)); g.stroke() }
+}
+
+function lines(id, title, xs, series, unit) {
+  const c = $(id), g = c.getContext('2d'), x0 = 24, H = c.height - 34, Wd = c.width - x0 - 6, xmax = xs[xs.length - 1] || 1
+  g.clearRect(0, 0, c.width, c.height); g.font = '11px monospace'
+  g.fillStyle = '#000'; g.fillText(title, 3, 12)
+  g.strokeStyle = '#ccc'; g.strokeRect(x0, 16, Wd, H)
+  g.fillText('1', 12, 22); g.fillText('0', 12, 16 + H)
+  series.forEach((s, k) => {
+    g.strokeStyle = s.color; g.beginPath()
+    s.v.forEach((y, i) => { const X = x0 + xs[i] / xmax * Wd, Y = 16 + H - y * H; i ? g.lineTo(X, Y) : g.moveTo(X, Y) })
+    g.stroke(); g.fillStyle = s.color; g.fillText(s.name, x0 + 6, 28 + k * 12)
+  })
+  g.fillStyle = '#000'; g.fillText(xmax + ' ' + unit, c.width - 80, 16 + H - 3)
+}
+
+function recompute() {
+  const txt = $('msg').value, k = (+$('k').value % 26 + 26) % 26
+  let d
+  try { d = BigInt($('d').value.trim() || 0) } catch (e) { d = 0n }
+  M = {txt, d, k}
+  put('aout', [])
+  if (d < 1n) put('ecout', [t => t.errD])
+  else {
+    const Q = mul(d), e = ecEncrypt(txt, Q), back = ecDecrypt(e.ct, e.R, d)
+    Object.assign(M, {Q, R: e.R, cEC: e.ct})
+    put('ecout', [
+      'Q = dG   x ' + cut(hx(Q[0])),
+      '         y ' + cut(hx(Q[1])),
+      t => t.ephem.padEnd(19) + cut(hx(e.r)) + '  ' + t.ephemNote,
+      t => 'R = rG   x ' + cut(hx(e.R[0])) + '   ' + t.sent,
+      t => t.shared + ' x(rQ) = x(dR) = ' + cut(hx(e.S[0])),
+      '',
+      t => t.ct.padEnd(11) + cut(e.ct),
+      t => t.dec.padEnd(11) + cut(back) + '   ' + t.usesD
+    ])
+  }
+  const cc = caesar(txt, k), back = caesar(cc, -k)
+  M.cC = cc
+  put('cout', [t => t.ct.padEnd(11) + cut(cc), t => t.dec.padEnd(11) + cut(back) + '   ' + t.usesK])
+  $('tk').textContent = k
+  const norm = v => { const s = v.reduce((a, b) => a + b, 0) || 1; return v.map(x => x / s) }
+  const p1 = norm(counts(txt)), p2 = norm(counts(cc)), p3 = M.cEC ? norm(counts(M.cEC)) : Array(26).fill(0)
+  plot('f1', t => bars('f1', t.f1, p1, EN))
+  plot('f2', t => bars('f2', t.f2, p2, EN))
+  plot('f3', t => bars('f3', t.f3, p3, EN))
+  crack(); success()
+}
+
+function crack() {
+  if (!M.cC) return
+  const letters = [...M.cC].filter(isL), L = Math.max(1, Math.min(+$('len').value || 1, letters.length))
+  const ct = letters.slice(0, L).join(''), meth = $('meth').value, k = M.k
+  // the bar chart shows the score of the selected method, chi-square for the exhaustive listing
+  if (meth == 'bg') {
+    const sc = [...Array(26)].map((_, s) => bigram(caesar(ct, -s)))
+    plot('chi', t => bars('chi', t.bgTitle(L), sc, null, null, argmax(sc)))
+  } else {
+    const ch = allChi(ct), top = Math.max(...ch), fit = ch.map(x => top - x)
+    plot('chi', t => bars('chi', t.chiTitle(L), fit, null, null, argmin(ch)))
+  }
+  if (meth == 'ex') return put('caout', [t => t.exHead, ...Array.from({length: 26}, (_, s) => ('k=' + s).padEnd(6) + cut(caesar(ct, -s)))])
+  const fk = freqKey(ct), bk = bgKey(ct), key = meth == 'chi' ? fk : bk
+  put('caout', [
+    t => t.guessed(key) + (key == k ? t.ok : t.wrong(k)),
+    t => t.plain + ' ' + cut(caesar(ct, -key)),
+    '',
+    t => t.cmp(fk, bk, k)
+  ])
+}
+
+function success() {
+  if (!M.cC) return
+  const letters = [...M.cC].filter(isL), n = letters.length, mx = Math.min(n, 90), xs = [], fy = [], by = [], trials = 25
+  for (let L = 1; L <= mx; L += Math.max(1, Math.floor(mx / 45))) {
+    let f = 0, b = 0
+    for (let i = 0; i < trials; i++) {
+      const o = n > L ? Math.floor(Math.random() * (n - L + 1)) : 0, w = letters.slice(o, o + L).join('')
+      if (freqKey(w) == M.k) f++
+      if (bgKey(w) == M.k) b++
+    }
+    xs.push(L); fy.push(f / trials); by.push(b / trials)
+  }
+  plot('suc', t => lines('suc', t.sucTitle(trials), xs, [
+    {v: fy, color: '#000', name: t.chiName}, {v: by, color: 'red', name: t.bgName}], t.letters))
+}
+
+function attack() {
+  if (!M.Q) return
+  const B = Math.max(1, Math.min(+$('b').value || 1, 48)), bound = 2n ** BigInt(B), am = $('am').value
+  const head = t => t.space(B, bound)
+  if (B > (am == 'bf' ? 18 : 32)) return put('aout', [head, t => am == 'bf' ? t.tooBf : t.tooBs])
+  put('aout', [head, t => t.running])
+  // let the browser show "running" before the search blocks the page
+  setTimeout(() => {
+    const t0 = performance.now(), d = am == 'bf' ? brute(M.Q, bound) : bsgs(M.Q, bound), ms = (performance.now() - t0).toFixed(0)
+    if (d == null) return put('aout', [head, t => t.notFound(B)])
+    const steps = 2 * Math.ceil(Math.sqrt(Number(bound))), plain = M.R && M.cEC ? cut(ecDecrypt(M.cEC, M.R, d)) : null
+    put('aout', [head,
+      t => t.found(d) + (d == M.d ? t.matches : ''),
+      t => am == 'bf' ? t.tookBf(ms, d) : t.tookBs(ms, steps, bound),
+      ...(plain ? [t => t.decWith + ' ' + plain] : [])])
+  }, 20)
+}
+
+$('lang').onchange = () => {
+  lang = $('lang').value
+  try { localStorage.setItem('lang', lang) } catch (e) {}
+  texts()
+  Object.keys(out).forEach(show)
+  Object.values(charts).forEach(f => f(tr()))
+}
+// the downloaded page loads localisation.js from its own folder
+$('dl').onclick = async () => {
+  const save = (blob, name) => { const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = name; l.click() }
+  const page = (await (await fetch(location.href)).text()).replace('../localisation.js', 'localisation.js')
+  save(new Blob([page], {type: 'text/html'}), 'hw2-b.html')
+  save(await (await fetch('../localisation.js')).blob(), 'localisation.js')
+}
+
+for (const id of ['msg', 'd', 'b', 'k']) $(id).onchange = recompute
+$('enc').onclick = recompute
+$('meth').onchange = $('len').onchange = crack
+$('ca').onclick = crack
+$('aa').onclick = attack
+texts()
+recompute()
+</script>
