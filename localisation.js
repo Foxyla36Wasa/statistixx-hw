@@ -259,6 +259,108 @@ A real ECIES solves these with a proper key derivation function, a real cipher a
     tookBf: (ms, d) => `took ${ms} ms, about ${d} point additions`,
     tookBs: (ms, s, b) => `took ${ms} ms, about ${s} steps instead of ${b}`,
     decWith: 'decrypted with the recovered d:'
+  },
+  hw3: {
+    title: 'HW3 - penetration score, LLN and CLT',
+    dl: 'download',
+    h1: 'HW3 - n systems, m attackers and the aggregate penetration score',
+    intro: 'Each attacker goes through the n systems one at a time and collects a score X at each step. The m attackers are independent, so the m trajectories are m samples of the same random walk.',
+    modelL: 'model',
+    optB: 'Bernoulli, X in {0,1}, P(X=1) = p',
+    optR: 'Rademacher, X in {-1,+1}, p = 1/2',
+    run: 'run',
+    hTraj: '1. trajectories',
+    viewL: 'view',
+    first: 'draw the first',
+    first2: 'attackers, red: theoretical mean and plus or minus one standard deviation',
+    hDist: '2. distribution of the three quantities at the final n',
+    distNote: 'black: the m attackers, red: the normal density predicted by the central limit theorem',
+    hLln: '3. law of large numbers',
+    lln1: 'fraction of attackers with |S_n/n - mean| > e, for e =',
+    lln2: ', compared with the Chebyshev bound',
+    hVar: '4. variance under the three normalizations',
+    varNote: 'log scale, dots: measured over the m attackers, lines: theory',
+    hClt: '5. central limit theorem',
+    cltNote: 'standardized score (S_n - n*mean) / (sd*sqrt(n)) compared with the standard normal, and the largest gap between the two cumulative distributions',
+    notesH: 'notes',
+    notes: `<p>The defaults are the Bernoulli model with p = 0.3, n = 1000 systems and m = 2000 attackers.
+Every chart is built from the m simulated trajectories when the page runs, nothing is precomputed.
+The three quantities are recorded at 44 values of n spaced on a log scale between 1 and the final n, so every chart against n shows the behaviour for increasing n in a single run.</p>
+<p>The model. An attacker goes through the systems in order and at system i collects the score X_i.
+In the Bernoulli model X_i = 1 means that the system was penetrated and p is the success rate per system, so S_n counts how many of the n systems were compromised.
+The Rademacher model gives +1 for a success and -1 for a failure with equal probability. Its step mean is zero,
+and it represents the symmetric case with no drift at all.
+The m attackers do not interact, so m does not change the process: it is the number of samples used to see its distribution.</p>
+<p>The three views in section 1 summarise the behaviour. S_n spreads out like a fan whose width grows like sqrt(n) around the line n times the step mean.
+S_n/n is the same data divided by n, and the fan collapses onto the step mean. S_n/sqrt(n) divides by just enough to keep the fan at a constant width.
+The red curves are the theoretical mean and plus or minus one standard deviation.</p>
+<p>Law of large numbers. S_n/n converges in probability to the step mean, p for Bernoulli and 0 for Rademacher.
+Section 3 shows it directly: the fraction of attackers whose average is further than e from the mean goes to zero as n grows.
+Chebyshev's inequality gives the bound variance / (n e^2), drawn in red. The measured fraction stays below it and falls much faster,
+because Chebyshev uses only the variance while the real tail is close to normal and decays exponentially.</p>
+<p>Variance. A single step has variance s^2, which is p(1-p) for Bernoulli and 1 for Rademacher.
+The steps are independent, so the variances add: Var(S_n) = n s^2, Var(S_n/n) = s^2 / n and Var(S_n/sqrt(n)) = s^2.
+On the log scale of section 4 these are a rising line, a falling line and a flat line, and the measured points lie on them.
+This is why the three normalizations behave so differently: dividing by n is too strong and removes the fluctuation,
+not dividing lets it grow without limit, and dividing by sqrt(n) is the only choice that keeps it finite and non-zero.</p>
+<p>Central limit theorem. For Rademacher the step mean is 0 and the step variance is 1, so S_n/sqrt(n) is already standardized
+and converges in distribution to N(0,1) without any change. For Bernoulli the same quantity has mean sqrt(n) p,
+which grows without limit, so S_n/sqrt(n) does not converge and the normal limit appears only after centering,
+as (S_n - n p) / sqrt(n p (1-p)). Section 5 compares this standardized score with the standard normal.</p>
+<p>The largest gap between the two cumulative distributions does not go to zero in the plot, for two reasons.
+S_n takes values on a lattice (integers for Bernoulli, integers two apart for Rademacher), so its cumulative distribution is a staircase
+while the normal one is smooth. Near the centre each step of the staircase is about 0.4 times the lattice spacing after standardizing,
+and the normal curve can at best pass through the middle of a step, so the gap cannot go below half a step:
+about 0.4/sqrt(n) for Rademacher, the red curve in the chart.
+The second limit, the blue line, is the gap that a sample of m points drawn from an exact normal would still show, about 0.87/sqrt(m).
+Convergence in distribution holds and the two cumulative distributions meet in the limit,
+but a finite n and a finite m each leave a visible trace, and the measured gap follows the larger of the two.</p>
+<p>How n and m act. They have different roles. n is the size of the attack surface and drives the mathematics:
+the concentration of S_n/n, the sqrt(n) growth of the fluctuations and the approach to the normal shape.
+For a single attacker m does not change anything, it only sets how precisely the process can be measured.
+The +- printed next to each number is the Monte Carlo error due to m, about s/sqrt(m) for a mean
+and about sqrt(2/m) in relative terms for a variance. With m = 2000 a measured variance can be a few percent away from the theory
+without anything being wrong, which is why the two values are printed side by side. A suitable m is one that makes this error
+small compared to the effect being studied: increasing m makes the histograms smoother and lowers the blue line,
+while increasing n is what makes the three normalizations behave differently.</p>
+<p>In security terms. The expected number of compromised systems is n p and grows with the size of the organization,
+so a larger organization loses more machines in absolute terms. The compromise rate S_n/n settles at p whatever the size,
+so the fraction of systems that fall depends on the defence of each system and not on how many systems there are.
+What changes with n is predictability: the relative spread of the rate is s / (p sqrt(n)) and shrinks,
+so a large organization loses a very predictable fraction, while for a small one the result depends much more on chance, in both directions.
+<br>The number of attackers matters when their results are combined, and the last two lines of the output show the two ways.
+All m attackers together have a total score with mean m n p, which grows with both m and n.
+The best of the m attackers ends about sqrt(2 ln m) standard deviations above the mean (slightly less for small m), so its advantage grows only slowly with m,
+but for a defender it is usually this best attacker, not the average one, that decides the outcome.
+<br>The symmetric Rademacher case represents a defence that wins as often as it loses: the expected net score is zero,
+but the actual score still moves away from zero like sqrt(n), so even a balanced situation produces large absolute imbalances on a large number of systems.</p>`,
+    errP: 'p must be strictly between 0 and 1',
+    errBig: 'n times m is too large for the browser, reduce n or m',
+    head: (model, mu, v, n, m) => `${model},  step mean = ${mu},  step variance = ${v},  n = ${n},  m = ${m}`,
+    mcNote: 'the +- is the Monte Carlo error expected from m attackers, not a property of the process',
+    mean: 'mean',
+    theory: 'theory',
+    variance: 'variance',
+    total: (m, v, e, s) => `all m = ${m} attackers together: total score ${v}  (theory m*n*mean = ${e}, standard deviation ${s})`,
+    best: (b, z, ez) => `best attacker: S_n = ${b}, ${z} standard deviations above the mean  (about ${ez} expected for the best of m)`,
+    trajTitle: q => `${q} against the number of systems`,
+    llnTitle: e => `P(|S_n/n - mean| > ${e})`,
+    measured: 'measured',
+    cheb: 'Chebyshev bound',
+    varTitle: 'variance of the three quantities',
+    vS: 'Var(S_n) grows like n',
+    vA: 'Var(S_n/n) falls like 1/n',
+    vQ: 'Var(S_n/sqrt(n)) is flat',
+    cltTitle: 'standardized S_n against N(0,1)',
+    ksTitle: 'largest gap to the normal CDF',
+    ksGrid: 'floor from the lattice spacing of S_n',
+    ksSamp: 'level expected from m samples alone',
+    gap: (n, v) => `largest gap at n = ${n}: ${v}`,
+    floors: 'the gap cannot go below the larger of two floors, and the measured points follow the one that dominates',
+    latt: (v, s) => `  lattice floor at this n ${v}, because S_n only takes values ${s} apart and the normal is continuous`,
+    samp: v => `  sampling level 0.87/sqrt(m) = ${v}, the gap that an exactly normal sample of this size would still show`,
+    rad: 'S_n/sqrt(n) already has mean 0 and variance 1, so it converges to N(0,1) with no further centering',
+    ber: 'S_n/sqrt(n) has mean sqrt(n)*p, which grows, so the standard normal limit needs the centering above'
   }
 },
 it: {
@@ -520,6 +622,108 @@ Un vero ECIES risolve questi problemi con una funzione di derivazione della chia
     tookBf: (ms, d) => `${ms} ms, circa ${d} somme di punti`,
     tookBs: (ms, s, b) => `${ms} ms, circa ${s} passi invece di ${b}`,
     decWith: 'decifrato con la d trovata:'
+  },
+  hw3: {
+    title: 'HW3 - punteggio di penetrazione, LGN e TLC',
+    dl: 'scarica',
+    h1: 'HW3 - n sistemi, m attaccanti e il punteggio di penetrazione aggregato',
+    intro: 'Ogni attaccante attraversa gli n sistemi uno alla volta e a ogni passo ottiene un punteggio X. Gli m attaccanti sono indipendenti, quindi le m traiettorie sono m campioni della stessa passeggiata aleatoria.',
+    modelL: 'modello',
+    optB: 'Bernoulli, X in {0,1}, P(X=1) = p',
+    optR: 'Rademacher, X in {-1,+1}, p = 1/2',
+    run: 'esegui',
+    hTraj: '1. traiettorie',
+    viewL: 'vista',
+    first: 'disegna i primi',
+    first2: 'attaccanti, rosso: media teorica e più o meno una deviazione standard',
+    hDist: "2. distribuzione delle tre quantità all'n finale",
+    distNote: 'nero: gli m attaccanti, rosso: la densità normale prevista dal teorema del limite centrale',
+    hLln: '3. legge dei grandi numeri',
+    lln1: 'frazione di attaccanti con |S_n/n - media| > e, per e =',
+    lln2: ', confrontata con il limite di Chebyshev',
+    hVar: '4. varianza con le tre normalizzazioni',
+    varNote: 'scala logaritmica, punti: misurati sugli m attaccanti, linee: teoria',
+    hClt: '5. teorema del limite centrale',
+    cltNote: 'punteggio standardizzato (S_n - n*media) / (dev*sqrt(n)) confrontato con la normale standard, e la massima distanza tra le due funzioni di ripartizione',
+    notesH: 'note',
+    notes: `<p>I valori di default sono il modello di Bernoulli con p = 0.3, n = 1000 sistemi e m = 2000 attaccanti.
+Ogni grafico è costruito dalle m traiettorie simulate al momento, niente è precalcolato.
+Le tre quantità vengono registrate a 44 valori di n distribuiti su scala logaritmica tra 1 e l'n finale, quindi ogni grafico in funzione di n mostra il comportamento per n crescente con una sola simulazione.</p>
+<p>Il modello. Un attaccante attraversa i sistemi in ordine e al sistema i ottiene il punteggio X_i.
+Nel modello di Bernoulli X_i = 1 significa che il sistema è stato violato e p è la probabilità di successo per sistema, quindi S_n conta quanti degli n sistemi sono stati compromessi.
+Il modello di Rademacher dà +1 per un successo e -1 per un fallimento con la stessa probabilità. La media del passo è zero,
+e rappresenta il caso simmetrico, senza alcuna deriva.
+Gli m attaccanti non interagiscono, quindi m non cambia il processo: è il numero di campioni usati per vederne la distribuzione.</p>
+<p>Le tre viste della sezione 1 riassumono il comportamento. S_n si apre a ventaglio, con un'ampiezza che cresce come sqrt(n) attorno alla retta n per la media del passo.
+S_n/n sono gli stessi dati divisi per n, e il ventaglio si stringe sulla media del passo. S_n/sqrt(n) divide quanto basta per mantenere il ventaglio di ampiezza costante.
+Le curve rosse sono la media teorica e più o meno una deviazione standard.</p>
+<p>Legge dei grandi numeri. S_n/n converge in probabilità alla media del passo, p per Bernoulli e 0 per Rademacher.
+La sezione 3 lo mostra direttamente: la frazione di attaccanti la cui media dista più di e dalla media teorica tende a zero al crescere di n.
+La disuguaglianza di Chebyshev dà il limite varianza / (n e^2), disegnato in rosso. La frazione misurata resta sotto il limite e scende molto più in fretta,
+perché Chebyshev usa solo la varianza, mentre la coda reale è vicina a quella normale e decresce in modo esponenziale.</p>
+<p>Varianza. Un singolo passo ha varianza s^2, che vale p(1-p) per Bernoulli e 1 per Rademacher.
+I passi sono indipendenti, quindi le varianze si sommano: Var(S_n) = n s^2, Var(S_n/n) = s^2 / n e Var(S_n/sqrt(n)) = s^2.
+Sulla scala logaritmica della sezione 4 sono una retta crescente, una decrescente e una orizzontale, e i punti misurati stanno su di esse.
+Per questo le tre normalizzazioni si comportano in modo così diverso: dividere per n è troppo e annulla la fluttuazione,
+non dividere la lascia crescere senza limite, e dividere per sqrt(n) è l'unica scelta che la mantiene finita e diversa da zero.</p>
+<p>Teorema del limite centrale. Per Rademacher la media del passo è 0 e la varianza è 1, quindi S_n/sqrt(n) è già standardizzato
+e converge in distribuzione a N(0,1) senza alcuna modifica. Per Bernoulli la stessa quantità ha media sqrt(n) p,
+che cresce senza limite, quindi S_n/sqrt(n) non converge e il limite normale compare solo dopo aver centrato,
+cioè con (S_n - n p) / sqrt(n p (1-p)). La sezione 5 confronta questo punteggio standardizzato con la normale standard.</p>
+<p>Nel grafico la massima distanza tra le due funzioni di ripartizione non va a zero, per due motivi.
+S_n assume valori su un reticolo (interi per Bernoulli, interi a distanza due per Rademacher), quindi la sua funzione di ripartizione è a gradini,
+mentre quella normale è continua. Vicino al centro ogni gradino, dopo la standardizzazione, è alto circa 0.4 volte il passo del reticolo,
+e la curva normale può al massimo passare a metà del gradino, quindi la distanza non può scendere sotto mezzo gradino:
+circa 0.4/sqrt(n) per Rademacher, la curva rossa del grafico.
+Il secondo limite, la linea blu, è la distanza che mostrerebbe anche un campione di m punti estratti da una normale esatta, circa 0.87/sqrt(m).
+La convergenza in distribuzione vale e le due funzioni di ripartizione coincidono al limite,
+ma un n finito e un m finito lasciano ciascuno una traccia visibile, e la distanza misurata segue il maggiore dei due limiti.</p>
+<p>Il ruolo di n e m. Hanno compiti diversi. n è la dimensione della superficie di attacco e guida la matematica:
+la concentrazione di S_n/n, la crescita come sqrt(n) delle fluttuazioni e l'avvicinamento alla forma normale.
+Per il singolo attaccante m non cambia nulla, stabilisce solo con quanta precisione si misura il processo.
+Il +- stampato accanto a ogni numero è l'errore Monte Carlo dovuto a m, circa s/sqrt(m) per una media
+e circa sqrt(2/m) in termini relativi per una varianza. Con m = 2000 una varianza misurata può discostarsi di qualche punto percentuale dalla teoria
+senza che ci sia nulla di sbagliato, ed è per questo che i due valori sono stampati uno accanto all'altro. Un m adatto è quello che rende questo errore
+piccolo rispetto all'effetto che si vuole studiare: aumentare m rende gli istogrammi più regolari e abbassa la linea blu,
+mentre aumentare n è ciò che fa comportare in modo diverso le tre normalizzazioni.</p>
+<p>In termini di sicurezza. Il numero atteso di sistemi compromessi è n p e cresce con la dimensione dell'organizzazione,
+quindi un'organizzazione più grande perde più macchine in termini assoluti. Il tasso di compromissione S_n/n si stabilizza su p qualunque sia la dimensione,
+quindi la frazione di sistemi che cadono dipende dalla difesa di ciascun sistema e non da quanti sistemi ci sono.
+Con n cambia invece la prevedibilità: la dispersione relativa del tasso è s / (p sqrt(n)) e si riduce,
+quindi una grande organizzazione perde una frazione molto prevedibile, mentre per una piccola il risultato dipende molto di più dal caso, in entrambe le direzioni.
+<br>Il numero di attaccanti conta quando i loro risultati vengono combinati, e le ultime due righe dell'output mostrano i due modi.
+Tutti gli m attaccanti insieme hanno un punteggio totale con media m n p, che cresce sia con m sia con n.
+Il migliore degli m attaccanti finisce circa sqrt(2 ln m) deviazioni standard sopra la media (un po' meno per m piccolo), quindi il suo vantaggio cresce solo lentamente con m,
+ma per chi difende di solito è proprio il migliore attaccante, e non quello medio, a decidere l'esito.
+<br>Il caso simmetrico di Rademacher rappresenta una difesa che vince tanto spesso quanto perde: il punteggio netto atteso è zero,
+ma il punteggio reale si allontana comunque da zero come sqrt(n), quindi anche una situazione in equilibrio produce grandi squilibri assoluti su un gran numero di sistemi.</p>`,
+    errP: 'p deve essere strettamente compreso tra 0 e 1',
+    errBig: 'n per m è troppo grande per il browser, riduci n o m',
+    head: (model, mu, v, n, m) => `${model},  media del passo = ${mu},  varianza del passo = ${v},  n = ${n},  m = ${m}`,
+    mcNote: "il +- è l'errore Monte Carlo dovuto agli m attaccanti, non una proprietà del processo",
+    mean: 'media',
+    theory: 'teoria',
+    variance: 'varianza',
+    total: (m, v, e, s) => `tutti gli m = ${m} attaccanti insieme: punteggio totale ${v}  (teoria m*n*media = ${e}, deviazione standard ${s})`,
+    best: (b, z, ez) => `miglior attaccante: S_n = ${b}, ${z} deviazioni standard sopra la media  (circa ${ez} attese per il migliore di m)`,
+    trajTitle: q => `${q} in funzione del numero di sistemi`,
+    llnTitle: e => `P(|S_n/n - media| > ${e})`,
+    measured: 'misurato',
+    cheb: 'limite di Chebyshev',
+    varTitle: 'varianza delle tre quantità',
+    vS: 'Var(S_n) cresce come n',
+    vA: 'Var(S_n/n) cala come 1/n',
+    vQ: 'Var(S_n/sqrt(n)) è costante',
+    cltTitle: 'S_n standardizzato e N(0,1)',
+    ksTitle: 'massima distanza dalla CDF normale',
+    ksGrid: 'minimo dovuto al passo del reticolo di S_n',
+    ksSamp: 'livello atteso dai soli m campioni',
+    gap: (n, v) => `massima distanza a n = ${n}: ${v}`,
+    floors: 'la distanza non può scendere sotto il maggiore dei due minimi, e i punti misurati seguono quello che prevale',
+    latt: (v, s) => `  minimo del reticolo a questo n ${v}, perché S_n assume solo valori distanti ${s} e la normale è continua`,
+    samp: v => `  livello di campionamento 0.87/sqrt(m) = ${v}, la distanza che mostrerebbe anche un campione esattamente normale di questa dimensione`,
+    rad: 'S_n/sqrt(n) ha già media 0 e varianza 1, quindi converge a N(0,1) senza bisogno di centrarlo',
+    ber: 'S_n/sqrt(n) ha media sqrt(n)*p, che cresce, quindi per il limite normale standard serve la centratura vista sopra'
   }
 }
 }

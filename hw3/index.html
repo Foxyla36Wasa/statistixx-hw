@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>HW3</title>
+<style>
+body{font:14px monospace;max-width:960px;margin:1em auto;padding:0 1em}
+input{width:4em}
+pre{white-space:pre-wrap}
+canvas{border:1px solid #aaa;max-width:100%;height:auto;margin:2px}
+</style>
+<script src="../localisation.js"></script>
+
+<p><a href="../hw1/">HW1</a> | <a href="../hw2/">HW2</a> | <a href="../hw2-b/">HW2-B</a> | <a href="../hw3/">HW3</a> |
+<select id=lang><option value=en>ENG</option><option value=it>ITA</option></select>
+<button id=dl data-t=dl></button></p>
+
+<h3 data-t=h1></h3>
+<p><span data-t=intro></span>
+<br><span data-t=modelL></span> <select id=model><option value=b data-t=optB></option><option value=r data-t=optR></option></select>
+p <input id=p value=0.3>
+n <input id=n value=1000>
+m <input id=m value=2000>
+seed <input id=seed value=1>
+<button id=run data-t=run></button></p>
+<pre id=out></pre>
+
+<h3 data-t=hTraj></h3>
+<p><span data-t=viewL></span> <select id=view><option value=s>S_n</option><option value=a>S_n / n</option><option value=q>S_n / sqrt(n)</option></select>
+<span data-t=first></span> <input id=show value=60> <span data-t=first2></span></p>
+<canvas id=traj width=920 height=320></canvas>
+
+<h3 data-t=hDist></h3>
+<p data-t=distNote></p>
+<canvas id=h1 width=300 height=170></canvas><canvas id=h2 width=300 height=170></canvas><canvas id=h3 width=300 height=170></canvas>
+
+<h3 data-t=hLln></h3>
+<p><span data-t=lln1></span> <input id=eps value=0.05><span data-t=lln2></span></p>
+<canvas id=lln width=620 height=170></canvas>
+
+<h3 data-t=hVar></h3>
+<p data-t=varNote></p>
+<canvas id=vr width=620 height=200></canvas>
+<pre id=vt></pre>
+
+<h3 data-t=hClt></h3>
+<p data-t=cltNote></p>
+<canvas id=clt width=300 height=170></canvas><canvas id=ks width=300 height=170></canvas>
+<pre id=ct></pre>
+
+<h3 data-t=notesH></h3>
+<div data-t=notes></div>
+
+<script>
+const $ = id => document.getElementById(id)
+const SQ = Math.sqrt
+const mn = v => { let x = Infinity; for (const y of v) if (y < x) x = y; return x }
+const mx = v => { let x = -Infinity; for (const y of v) if (y > x) x = y; return x }
+const avg = v => { let s = 0; for (const y of v) s += y; return s / v.length }
+const vr = v => { const a = avg(v); let s = 0; for (const y of v) s += (y - a) * (y - a); return s / v.length }
+const fx = (x, d = 4) => (Math.abs(x) < 1e4 && Math.abs(x) >= 1e-4 || x == 0 ? x.toFixed(d) : x.toExponential(2))
+
+let lang = 'en'
+try { lang = localStorage.getItem('lang') || 'en' } catch (e) {}
+const tr = () => LOC[lang].hw3
+
+function texts() {
+  document.documentElement.lang = lang
+  document.title = tr().title
+  $('lang').value = lang
+  document.querySelectorAll('[data-t]').forEach(e => e.innerHTML = tr()[e.dataset.t])
+}
+
+// outputs and charts are kept as functions of the text, so they can be redrawn in the other language
+const out = {}, charts = {}
+const show = id => $(id).textContent = (out[id] || []).map(f => typeof f == 'function' ? f(tr()) : f).join('\n')
+const put = (id, lines) => { out[id] = lines; show(id) }
+const keep = (id, f) => { charts[id] = f; f(tr()) }
+
+function erf(x) {
+  const s = Math.sign(x), t = 1 / (1 + .3275911 * Math.abs(x))
+  return s * (1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - .284496736) * t + .254829592) * t * Math.exp(-x * x))
+}
+const Phi = z => .5 * (1 + erf(z / Math.SQRT2))
+const pdf = (x, u, s) => Math.exp(-(((x - u) / s) ** 2) / 2) / (s * SQ(2 * Math.PI))
+
+function rng(a) {
+  return () => {
+    a = a + 0x6D2B79F5 | 0
+    let t = Math.imul(a ^ a >>> 15, 1 | a)
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t
+    return ((t ^ t >>> 14) >>> 0) / 4294967296
+  }
+}
+
+let D = {}
+
+function simulate() {
+  const model = $('model').value, p = model == 'r' ? .5 : +$('p').value
+  const n = Math.max(1, Math.min(Math.round(+$('n').value) || 1, 200000))
+  const m = Math.max(2, Math.min(Math.round(+$('m').value) || 2, 20000))
+  const show = Math.max(0, Math.min(Math.round(+$('show').value) || 0, 200))
+  if (model == 'b' && !(p > 0 && p < 1)) return put('out', [t => t.errP])
+  if (n * m > 4e7) return put('out', [t => t.errBig])
+  const mu = model == 'r' ? 0 : p, sd = model == 'r' ? 1 : SQ(p * (1 - p))
+  const cp = []
+  for (let k = 0; k < 44; k++) {
+    const v = Math.round(Math.exp(Math.log(n) * (k + 1) / 44))
+    if (v >= 1 && v != cp[cp.length - 1]) cp.push(v)
+  }
+  if (cp[cp.length - 1] != n) cp.push(n)
+  const K = cp.length, at = cp.map(() => new Float64Array(m))
+  const step = Math.max(1, Math.ceil(n / 1200)), paths = []
+  const r = rng(Math.imul(Math.round(+$('seed').value) || 1, 2654435761) | 0)
+  for (let j = 0; j < m; j++) {
+    let S = 0, ci = 0
+    const keep = j < show ? [0] : null
+    for (let i = 1; i <= n; i++) {
+      S += model == 'r' ? (r() < .5 ? -1 : 1) : (r() < p ? 1 : 0)
+      while (ci < K && cp[ci] == i) at[ci++][j] = S
+      if (keep && (i % step == 0 || i == n)) keep.push(S)
+    }
+    if (keep) paths.push(keep)
+  }
+  D = { model, p, n, m, mu, sd, cp, at, paths, step, last: at[K - 1] }
+  report(); draw()
+}
+
+function report() {
+  const { n, m, mu, sd, last, model, p } = D
+  const S = Array.from(last), A = S.map(x => x / n), Q = S.map(x => x / SQ(n))
+  D.Z = S.map(x => (x - n * mu) / (sd * SQ(n)))
+  const row = (name, v, tu, tv) => {
+    const a = fx(avg(v)).padStart(10), b = fx(vr(v)).padStart(10), eu = fx(SQ(tv / m)), ev = fx(tv * SQ(2 / m))
+    return t => name.padEnd(12) + t.mean + ' ' + a + ' (' + t.theory + ' ' + fx(tu) + ' +- ' + eu + ')   ' +
+      t.variance + ' ' + b + ' (' + t.theory + ' ' + fx(tv) + ' +- ' + ev + ')'
+  }
+  // two ways to combine the attackers: all together, and the best one
+  const tot = S.reduce((s, x) => s + x, 0), best = mx(S), zb = (best - n * mu) / (sd * SQ(n))
+  const a = SQ(2 * Math.log(m)), ez = a - (Math.log(Math.log(m)) + Math.log(4 * Math.PI)) / (2 * a) + .5772 / a
+  put('out', [
+    t => t.head(model == 'r' ? 'Rademacher' : 'Bernoulli p = ' + p, fx(mu), fx(sd * sd), n, m),
+    t => t.mcNote,
+    '',
+    row('S_n', S, n * mu, n * sd * sd),
+    row('S_n/n', A, mu, sd * sd / n),
+    row('S_n/sqrt(n)', Q, SQ(n) * mu, sd * sd),
+    '',
+    t => t.total(m, tot, (m * n * mu).toFixed(0), (sd * SQ(m * n)).toFixed(1)),
+    t => t.best(best, zb.toFixed(2), ez.toFixed(2) + ' +- ' + (1.2825 / a).toFixed(2))
+  ])
+}
+
+function bars(id, title, v, ref, hi) {
+  const c = $(id), g = c.getContext('2d'), H = c.height - 20, bw = c.width / v.length
+  const top = Math.max(mx(v), ref ? mx(ref) : 0) || 1
+  g.clearRect(0, 0, c.width, c.height); g.font = '11px monospace'
+  v.forEach((y, i) => { g.fillStyle = i === hi ? 'red' : '#000'; g.fillRect(i * bw, c.height - y / top * H, Math.max(bw - 1, 1), y / top * H) })
+  g.fillStyle = '#000'; g.fillText(title, 3, 12)
+  if (ref) { g.strokeStyle = 'red'; g.beginPath(); ref.forEach((y, i) => g.lineTo((i + .5) * bw, c.height - y / top * H)); g.stroke() }
+}
+
+function hist(v, nb, u, s, sp) {
+  let lo = mn(v), hi = mx(v)
+  if (hi == lo) { lo -= .5; hi += .5 }
+  let bw = (hi - lo) / nb
+  if (sp > 0) { bw = sp * Math.max(1, Math.round(bw / sp)); lo -= sp / 2; hi += sp / 2 }
+  const nb2 = Math.max(1, Math.ceil((hi - lo) / bw)), h = Array(nb2).fill(0)
+  for (const x of v) h[Math.min(nb2 - 1, Math.floor((x - lo) / bw))]++
+  return { v: h.map(c => c / v.length), ref: h.map((_, i) => pdf(lo + (i + .5) * bw, u, s) * bw), lo, hi: lo + nb2 * bw }
+}
+
+function plot(id, title, xs, series, lo, hi, lg) {
+  const c = $(id), g = c.getContext('2d'), x0 = 46, H = c.height - 34, W = c.width - x0 - 8
+  const xa = Math.log(xs[0]), xb = Math.log(xs[xs.length - 1]) || 1
+  const Y = v => { const t = lg ? (Math.log(Math.max(v, lo)) - Math.log(lo)) / (Math.log(hi) - Math.log(lo)) : (v - lo) / (hi - lo); return 18 + H - Math.max(0, Math.min(1, t)) * H }
+  const X = v => x0 + (xb == xa ? 0 : (Math.log(v) - xa) / (xb - xa)) * W
+  g.clearRect(0, 0, c.width, c.height); g.font = '11px monospace'
+  g.fillStyle = '#000'; g.fillText(title, 3, 12)
+  g.strokeStyle = '#ccc'; g.strokeRect(x0, 18, W, H)
+  g.fillText(lg ? hi.toExponential(0) : hi.toFixed(2), 2, 24)
+  g.fillText(lg ? lo.toExponential(0) : lo.toFixed(2), 2, 18 + H)
+  g.fillText('n = ' + xs[0], x0, 18 + H + 12)
+  g.fillText(xs[xs.length - 1], c.width - 38, 18 + H + 12)
+  let li = 0
+  series.forEach(s => {
+    g.strokeStyle = g.fillStyle = s.color
+    if (s.dot) s.v.forEach((y, i) => y != null && g.fillRect(X(xs[i]) - 1.5, Y(y) - 1.5, 3, 3))
+    else { g.beginPath(); s.v.forEach((y, i) => y == null ? 0 : i ? g.lineTo(X(xs[i]), Y(y)) : g.moveTo(X(xs[i]), Y(y))); g.stroke() }
+    if (s.name) g.fillText(s.name, x0 + 6, 30 + li++ * 12)
+  })
+}
+
+function traj() {
+  if (!D.paths) return
+  const c = $('traj'), { n, mu, sd, paths, step } = D
+  const mode = $('view').value, H = c.height - 30, x0 = 52, W = c.width - x0 - 8
+  const f = (S, i) => mode == 's' ? S : mode == 'a' ? S / i : S / SQ(i)
+  const em = i => mode == 's' ? mu * i : mode == 'a' ? mu : mu * SQ(i)
+  const es = i => mode == 's' ? sd * SQ(i) : mode == 'a' ? sd / SQ(i) : sd
+  let lo = Infinity, hi = -Infinity
+  for (const q of paths) for (let k = 1; k < q.length; k++) {
+    const i = Math.min(k * step, n), y = f(q[k], i)
+    if (y < lo) lo = y; if (y > hi) hi = y
+  }
+  for (const i of [1, n]) { lo = Math.min(lo, em(i) - 2 * es(i)); hi = Math.max(hi, em(i) + 2 * es(i)) }
+  if (!(hi > lo)) { lo -= 1; hi += 1 }
+  const pad = (hi - lo) * .05; lo -= pad; hi += pad
+  const Y = v => 18 + H - (v - lo) / (hi - lo) * H, X = i => x0 + (i - 1) / Math.max(1, n - 1) * W
+  keep('traj', t => {
+    const g = c.getContext('2d')
+    g.clearRect(0, 0, c.width, c.height); g.font = '11px monospace'
+    g.fillStyle = '#000'
+    g.fillText(t.trajTitle({ s: 'S_n', a: 'S_n / n', q: 'S_n / sqrt(n)' }[mode]), 3, 12)
+    g.strokeStyle = '#ccc'; g.strokeRect(x0, 18, W, H)
+    g.fillText(hi.toFixed(2), 2, 26); g.fillText(lo.toFixed(2), 2, 18 + H)
+    g.fillText('1', x0, 18 + H + 12); g.fillText('n = ' + n, c.width - 60, 18 + H + 12)
+    g.strokeStyle = 'rgba(0,0,0,.35)'
+    for (const q of paths) {
+      g.beginPath()
+      for (let k = 1; k < q.length; k++) {
+        const i = Math.min(k * step, n), X1 = X(i), Y1 = Y(f(q[k], i))
+        k == 1 ? g.moveTo(X1, Y1) : g.lineTo(X1, Y1)
+      }
+      g.stroke()
+    }
+    g.strokeStyle = 'red'
+    for (const d of [0, 1, -1]) {
+      g.beginPath()
+      for (let i = 1; i <= n; i += Math.max(1, Math.floor(n / 400))) {
+        const X1 = X(i), Y1 = Y(em(i) + d * es(i))
+        i == 1 ? g.moveTo(X1, Y1) : g.lineTo(X1, Y1)
+      }
+      g.stroke()
+    }
+  })
+}
+
+function draw() {
+  const { n, m, mu, sd, cp, at, last, Z } = D
+  traj()
+  const S = Array.from(last)
+  const lat = D.model == 'r' ? 2 : 1
+  const H1 = hist(S, 40, n * mu, sd * SQ(n), lat)
+  const H2 = hist(S.map(x => x / n), 40, mu, sd / SQ(n), lat / n)
+  const H3 = hist(S.map(x => x / SQ(n)), 40, SQ(n) * mu, sd, lat / SQ(n))
+  bars('h1', 'S_n  [' + fx(H1.lo, 2) + ', ' + fx(H1.hi, 2) + ']', H1.v, H1.ref)
+  bars('h2', 'S_n/n  [' + fx(H2.lo, 3) + ', ' + fx(H2.hi, 3) + ']', H2.v, H2.ref)
+  bars('h3', 'S_n/sqrt(n)  [' + fx(H3.lo, 2) + ', ' + fx(H3.hi, 2) + ']', H3.v, H3.ref)
+
+  const eps = Math.abs(+$('eps').value) || .05
+  const emp = [], cheb = []
+  cp.forEach((k, i) => {
+    let c = 0
+    for (const s of at[i]) if (Math.abs(s / k - mu) > eps) c++
+    emp.push(c / m); cheb.push(Math.min(1, sd * sd / (k * eps * eps)))
+  })
+  keep('lln', t => plot('lln', t.llnTitle(eps), cp, [
+    { v: emp, color: '#000', name: t.measured, dot: 1 },
+    { v: cheb, color: 'red', name: t.cheb }], 0, 1))
+
+  const vS = [], vA = [], vQ = [], tS = [], tA = [], tQ = []
+  cp.forEach((k, i) => {
+    const a = at[i]
+    vS.push(vr(a)); vA.push(vr(Array.from(a, x => x / k))); vQ.push(vr(Array.from(a, x => x / SQ(k))))
+    tS.push(k * sd * sd); tA.push(sd * sd / k); tQ.push(sd * sd)
+  })
+  const all = [...vS, ...vA, ...vQ, ...tS, ...tA, ...tQ].filter(x => x > 0)
+  keep('vr', t => plot('vr', t.varTitle, cp, [
+    { v: vS, color: '#000', name: t.vS, dot: 1 }, { v: tS, color: '#000' },
+    { v: vA, color: 'red', name: t.vA, dot: 1 }, { v: tA, color: 'red' },
+    { v: vQ, color: 'blue', name: t.vQ, dot: 1 }, { v: tQ, color: 'blue' }],
+    mn(all) / 2, mx(all) * 2, 1))
+  put('vt', [
+    t => '       n   Var(S_n)' + t.theory.padStart(11) + '   Var(S_n/n)' + t.theory.padStart(11) + '  Var(S_n/sq)' + t.theory.padStart(11),
+    ...cp.filter((_, i) => i % 9 == 0 || i == cp.length - 1).map(k => {
+      const i = cp.indexOf(k)
+      return String(k).padStart(8) + fx(vS[i]).padStart(11) + fx(tS[i]).padStart(11) + fx(vA[i]).padStart(13) + fx(tA[i]).padStart(11) + fx(vQ[i]).padStart(13) + fx(tQ[i]).padStart(11)
+    })])
+
+  const HZ = hist(Z, 40, 0, 1, lat / (sd * SQ(n)))
+  keep('clt', t => bars('clt', t.cltTitle, HZ.v, HZ.ref))
+  const ksv = cp.map((k, i) => {
+    const z = Array.from(at[i], s => (s - k * mu) / (sd * SQ(k))).sort((a, b) => a - b)
+    let d = 0
+    for (let j = 0; j < z.length; j++) d = Math.max(d, Math.abs(Phi(z[j]) - (j + .5) / z.length))
+    return d
+  })
+  const samp = .8687 / SQ(m), grid = k => .19947 * lat / (sd * SQ(k))
+  keep('ks', t => plot('ks', t.ksTitle, cp, [
+    { v: ksv, color: '#000', name: t.measured, dot: 1 },
+    { v: cp.map(grid), color: 'red', name: t.ksGrid },
+    { v: cp.map(() => samp), color: 'blue', name: t.ksSamp }], 0, Math.max(.5, mx(ksv) * 1.1)))
+  put('ct', [
+    t => t.gap(D.n, fx(ksv[ksv.length - 1])),
+    t => t.floors,
+    t => t.latt(fx(grid(D.n)), lat),
+    t => t.samp(fx(samp)),
+    t => D.model == 'r' ? t.rad : t.ber])
+}
+
+$('lang').onchange = () => {
+  lang = $('lang').value
+  try { localStorage.setItem('lang', lang) } catch (e) {}
+  texts()
+  Object.keys(out).forEach(show)
+  Object.values(charts).forEach(f => f(tr()))
+}
+// the downloaded page loads localisation.js from its own folder
+$('dl').onclick = async () => {
+  const save = (blob, name) => { const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = name; l.click() }
+  const page = (await (await fetch(location.href)).text()).replace('../localisation.js', 'localisation.js')
+  save(new Blob([page], {type: 'text/html'}), 'hw3.html')
+  save(await (await fetch('../localisation.js')).blob(), 'localisation.js')
+}
+
+for (const id of ['model', 'p', 'n', 'm', 'seed', 'show']) $(id).onchange = simulate
+$('run').onclick = simulate
+$('view').onchange = traj
+$('eps').onchange = draw
+texts()
+simulate()
+</script>
