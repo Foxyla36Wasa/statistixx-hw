@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>HW4</title>
+<style>
+body{font:14px monospace;max-width:960px;margin:1em auto;padding:0 1em}
+input{width:4em}
+pre{white-space:pre-wrap}
+canvas{border:1px solid #aaa;max-width:100%;height:auto;margin:2px}
+</style>
+<script src="../localisation.js"></script>
+
+<p><a href="../hw1/">HW1</a> | <a href="../hw2/">HW2</a> | <a href="../hw2-b/">HW2-B</a> | <a href="../hw3/">HW3</a> | <a href="../hw4/">HW4</a> |
+<select id=lang><option value=en>ENG</option><option value=it>ITA</option></select>
+<button id=dl data-t=dl></button></p>
+
+<h3 data-t=h1></h3>
+
+<h3 data-t=hEx1></h3>
+<div data-t=deriv></div>
+<pre>d  = x - M
+M  += d / k
+SS += d * (x - M)
+s2 = SS / (k - 1)</pre>
+<p data-t=codeNote></p>
+<p><span data-t=dataL></span> <input id=data value="4 7 13 16" style="width:20em"> <button id=calc data-t=calc></button></p>
+<pre id=wt></pre>
+
+<h3 data-t=hEx2></h3>
+<p><span data-t=intro></span>
+<br><span data-t=distL></span> <select id=dist><option value=b data-t=optB></option><option value=u data-t=optU></option><option value=be data-t=optBe></option></select>
+p <input id=p value=0.3>
+n <input id=n value=1000>
+m <input id=m value=2000>
+seed <input id=seed value=1>
+<button id=run data-t=run></button></p>
+<pre id=out></pre>
+
+<h3 data-t=hAvg></h3>
+<p data-t=avgNote></p>
+<canvas id=pm width=620 height=170></canvas><canvas id=pv width=620 height=170></canvas>
+
+<h3 data-t=hVar></h3>
+<p data-t=varNote></p>
+<canvas id=vv width=620 height=200></canvas>
+<pre id=vt></pre>
+
+<h3 data-t=notesH></h3>
+<div data-t=notes></div>
+
+<script>
+const $ = id => document.getElementById(id)
+const SQ = Math.sqrt
+const mn = v => { let x = Infinity; for (const y of v) if (y < x) x = y; return x }
+const mx = v => { let x = -Infinity; for (const y of v) if (y > x) x = y; return x }
+const fx = (x, d = 4) => (Math.abs(x) < 1e4 && Math.abs(x) >= 1e-4 || x == 0 ? x.toFixed(d) : x.toExponential(2))
+
+let lang = 'en'
+try { lang = localStorage.getItem('lang') || 'en' } catch (e) {}
+const tr = () => LOC[lang].hw4
+
+function texts() {
+  document.documentElement.lang = lang
+  document.title = tr().title
+  $('lang').value = lang
+  document.querySelectorAll('[data-t]').forEach(e => e.innerHTML = tr()[e.dataset.t])
+}
+
+// outputs and charts are kept as functions of the text, so they can be redrawn in the other language
+const out = {}, charts = {}
+const show = id => $(id).textContent = (out[id] || []).map(f => typeof f == 'function' ? f(tr()) : f).join('\n')
+const put = (id, lines) => { out[id] = lines; show(id) }
+const keep = (id, f) => { charts[id] = f; f(tr()) }
+
+// Welford: the code of ex. 1
+function welford() {
+  const w = { k: 0, M: 0, SS: 0 }
+  w.add = x => { const d = x - w.M; w.M += d / ++w.k; w.SS += d * (x - w.M) }
+  w.var = () => w.SS / (w.k - 1)
+  return w
+}
+
+// ex. 1: the code applied step by step to the numbers typed by the user
+function ex1() {
+  const xs = $('data').value.split(/[\s,;]+/).filter(s => s !== '').map(Number).filter(Number.isFinite)
+  if (xs.length < 2) return put('wt', [t => t.errData])
+  const w = welford(), g = x => String(+x.toPrecision(7))
+  put('wt', ['   k          x_k          M_k         SS_k        s^2_k', ...xs.slice(0, 50).map(x => {
+    w.add(x)
+    return String(w.k).padStart(4) + g(x).padStart(13) + g(w.M).padStart(13) + g(w.SS).padStart(13) + (w.k > 1 ? g(w.var()) : '-').padStart(13)
+  })])
+}
+
+function rng(a) {
+  return () => {
+    a = a + 0x6D2B79F5 | 0
+    let t = Math.imul(a ^ a >>> 15, 1 | a)
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t
+    return ((t ^ t >>> 14) >>> 0) / 4294967296
+  }
+}
+
+// score distributions on [0, 10]: sampler, mean, variance and fourth central moment (needed for the theory of Var(s^2))
+function model(kind, p) {
+  if (kind == 'be') {
+    // 10 Beta(2, 5) is 10 times the 2nd smallest of 6 uniforms; moments by numerical integration of the density 30 x (1-x)^4
+    const draw = r => { const u = [r(), r(), r(), r(), r(), r()].sort((a, b) => a - b); return 10 * u[1] }
+    const N = 20000, f = x => 30 * x * (1 - x) ** 4
+    let mu = 0, s2 = 0, m4 = 0
+    for (let i = 0; i < N; i++) { const x = (i + .5) / N; mu += 10 * x * f(x) / N }
+    for (let i = 0; i < N; i++) { const x = (i + .5) / N, d = 10 * x - mu; s2 += d * d * f(x) / N; m4 += d ** 4 * f(x) / N }
+    return { draw, mu, s2, m4, name: t => t.nBe }
+  }
+  if (kind == 'u') return { draw: r => Math.floor(r() * 11), mu: 5, s2: 10, m4: 178, name: t => t.nU }
+  const q = p * (1 - p)
+  return { draw: r => { let x = 0; for (let i = 0; i < 10; i++) if (r() < p) x++; return x }, mu: 10 * p, s2: 10 * q, m4: 10 * q * (1 + 24 * q), name: t => t.nB(p) }
+}
+
+let D = {}
+
+function simulate() {
+  const kind = $('dist').value, p = +$('p').value
+  const n = Math.max(2, Math.min(Math.round(+$('n').value) || 2, 200000))
+  const m = Math.max(2, Math.min(Math.round(+$('m').value) || 2, 20000))
+  if (kind == 'b' && !(p > 0 && p < 1)) return put('out', [t => t.errP])
+  if (n * m > 1e7) return put('out', [t => t.errBig])
+  const { draw: score, mu, s2, m4, name } = model(kind, p)
+  const cp = []
+  for (let k = 0; k < 40; k++) {
+    const v = Math.max(2, Math.round(Math.exp(Math.log(2) + (Math.log(n) - Math.log(2)) * k / 39)))
+    if (v != cp[cp.length - 1]) cp.push(v)
+  }
+  // across the m hackers, one accumulator per value of n for the sampling means and one for the sampling variances
+  const acc = cp.map(() => ({ mean: welford(), vars: welford() }))
+  const r = rng(Math.imul(Math.round(+$('seed').value) || 1, 2654435761) | 0)
+  for (let j = 0; j < m; j++) {
+    const w = welford()
+    let ci = 0
+    for (let k = 1; k <= n; k++) {
+      w.add(score(r))
+      if (k == cp[ci]) { acc[ci].mean.add(w.M); acc[ci].vars.add(w.var()); ci++ }
+    }
+  }
+  D = { name, n, m, mu, s2, m4, cp, acc }
+  report(); draw()
+}
+
+// theory for the variance of the sample variance
+const varS2 = k => D.m4 / k - D.s2 ** 2 * (k - 3) / (k * (k - 1))
+
+function report() {
+  const { name, n, m, mu, s2, acc } = D, a = acc[acc.length - 1]
+  const row = (label, meas, name, th, err) => t => t[label].padEnd(36) + fx(meas).padStart(10) + '   ' + (name + ' = ' + fx(th)).padEnd(20) + ' +- ' + fx(err)
+  put('out', [
+    t => t.head(name(t), fx(mu), fx(s2), n, m),
+    t => t.mcNote,
+    '',
+    t => ''.padEnd(36) + t.measured.padStart(10) + '   ' + t.theory,
+    row('rMean', a.mean.M, 'mu', mu, SQ(s2 / n / m)),
+    row('rVar', a.vars.M, 'sigma^2', s2, SQ(varS2(n) / m))
+  ])
+}
+
+function plot(id, title, xs, series, lo, hi, lg) {
+  const c = $(id), g = c.getContext('2d'), x0 = 46, H = c.height - 34, W = c.width - x0 - 8
+  const xa = Math.log(xs[0]), xb = Math.log(xs[xs.length - 1]) || 1
+  const Y = v => { const q = lg ? (Math.log(Math.max(v, lo)) - Math.log(lo)) / (Math.log(hi) - Math.log(lo)) : (v - lo) / (hi - lo); return 18 + H - Math.max(0, Math.min(1, q)) * H }
+  const X = v => x0 + (xb == xa ? 0 : (Math.log(v) - xa) / (xb - xa)) * W
+  g.clearRect(0, 0, c.width, c.height); g.font = '11px monospace'
+  g.fillStyle = '#000'; g.fillText(title, 3, 12)
+  g.strokeStyle = '#ccc'; g.strokeRect(x0, 18, W, H)
+  g.fillText(lg ? hi.toExponential(0) : hi.toFixed(3), 2, 24)
+  g.fillText(lg ? lo.toExponential(0) : lo.toFixed(3), 2, 18 + H)
+  g.fillText('n = ' + xs[0], x0, 18 + H + 12)
+  g.fillText(xs[xs.length - 1], c.width - 38, 18 + H + 12)
+  let li = 0
+  series.forEach(s => {
+    g.strokeStyle = g.fillStyle = s.color
+    if (s.dot) s.v.forEach((y, i) => g.fillRect(X(xs[i]) - 1.5, Y(y) - 1.5, 3, 3))
+    else { g.beginPath(); s.v.forEach((y, i) => i ? g.lineTo(X(xs[i]), Y(y)) : g.moveTo(X(xs[i]), Y(y))); g.stroke() }
+    if (s.name) g.fillText(s.name, x0 + 6, 30 + li++ * 12)
+  })
+}
+
+function draw() {
+  const { mu, s2, cp, acc } = D
+  const am = acc.map(a => a.mean.M), av = acc.map(a => a.vars.M)
+  const dm = Math.max(...am.map(x => Math.abs(x - mu))) * 1.3, dv = Math.max(...av.map(x => Math.abs(x - s2))) * 1.3
+  keep('pm', t => plot('pm', t.pmTitle, cp, [
+    { v: am, color: '#000', name: t.measured, dot: 1 },
+    { v: cp.map(() => mu), color: 'red', name: 'mu' }], mu - dm, mu + dm * 1.6))
+  keep('pv', t => plot('pv', t.pvTitle, cp, [
+    { v: av, color: '#000', name: t.measured, dot: 1 },
+    { v: cp.map(() => s2), color: 'red', name: 'sigma^2' }], s2 - dv, s2 + dv * 1.6))
+
+  const vm = acc.map(a => a.mean.var()), vs = acc.map(a => a.vars.var())
+  const tm = cp.map(k => s2 / k), ts = cp.map(varS2)
+  const all = [...vm, ...vs, ...tm, ...ts].filter(x => x > 0)
+  keep('vv', t => plot('vv', t.vvTitle, cp, [
+    { v: vm, color: '#000', name: t.vMeans, dot: 1 }, { v: tm, color: '#000' },
+    { v: vs, color: 'red', name: t.vVars, dot: 1 }, { v: ts, color: 'red' }], mn(all) / 2, mx(all) * 20, 1))
+  put('vt', [
+    t => '       n   Var(mean)' + t.theory.padStart(11) + '   Var(s^2)' + t.theory.padStart(11),
+    ...cp.filter((_, i) => i % 6 == 0 || i == cp.length - 1).map(k => {
+      const i = cp.indexOf(k)
+      return String(k).padStart(8) + fx(vm[i]).padStart(12) + fx(tm[i]).padStart(11) + fx(vs[i]).padStart(11) + fx(ts[i]).padStart(11)
+    })])
+}
+
+$('lang').onchange = () => {
+  lang = $('lang').value
+  try { localStorage.setItem('lang', lang) } catch (e) {}
+  texts()
+  Object.keys(out).forEach(show)
+  Object.values(charts).forEach(f => f(tr()))
+}
+// the downloaded page loads localisation.js from its own folder
+$('dl').onclick = async () => {
+  const save = (blob, name) => { const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = name; l.click() }
+  const page = (await (await fetch(location.href)).text()).replace('../localisation.js', 'localisation.js')
+  save(new Blob([page], {type: 'text/html'}), 'hw4.html')
+  save(await (await fetch('../localisation.js')).blob(), 'localisation.js')
+}
+
+$('data').onchange = $('calc').onclick = ex1
+for (const id of ['dist', 'p', 'n', 'm', 'seed']) $(id).onchange = simulate
+$('run').onclick = simulate
+texts()
+ex1()
+simulate()
+</script>

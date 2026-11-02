@@ -361,6 +361,71 @@ but the actual score still moves away from zero like sqrt(n), so even a balanced
     samp: v => `  sampling level 0.87/sqrt(m) = ${v}, the gap that an exactly normal sample of this size would still show`,
     rad: 'S_n/sqrt(n) already has mean 0 and variance 1, so it converges to N(0,1) with no further centering',
     ber: 'S_n/sqrt(n) has mean sqrt(n)*p, which grows, so the standard normal limit needs the centering above'
+  },
+  hw4: {
+    title: 'HW4 - Welford and sampling mean and variance',
+    dl: 'download',
+    h1: "HW4 - Welford's recurrence formulas, sampling mean and sampling variance",
+    hEx1: "Ex. 1 - Welford's recurrence formulas",
+    deriv: `<p>Knuth's recurrence for the mean. Let M_k be the mean of the first k values. Since k M_k = (k-1) M_(k-1) + x_k,</p>
+<pre>M_k = M_(k-1) + (x_k - M_(k-1)) / k</pre>
+<p>The new mean is the old one corrected by a fraction 1/k of the error d_k = x_k - M_(k-1) that the old mean makes on the new value.</p>
+<p>Sum of squares. The same approach is applied to SS_k = sum_(i=1..k) (x_i - M_k)^2 = sum_(i=1..k) x_i^2 - k M_k^2.
+Subtracting the same expression for k-1:</p>
+<pre>SS_k - SS_(k-1) = x_k^2 - k M_k^2 + (k-1) M_(k-1)^2</pre>
+<p>Now write x_k = M_(k-1) + d_k and M_k = M_(k-1) + d_k / k and expand. All the terms that contain M_(k-1) cancel and only d_k^2 - d_k^2 / k remains.
+Since x_k - M_k = d_k (k-1) / k, the result can be written with the two errors, before and after updating the mean:</p>
+<pre>SS_k = SS_(k-1) + (x_k - M_(k-1)) (x_k - M_k)       SS_1 = 0</pre>
+<p>Variance. The sample variance is s_k^2 = SS_k / (k-1) for k >= 2. Dividing the recurrence by k-1 gives the recurrence for the variance:</p>
+<pre>s_k^2 = (k-2)/(k-1) s_(k-1)^2 + d_k^2 / k</pre>
+<p>Code. For each new value x, with k counting from 1, the core logic is a few lines:</p>`,
+    codeNote: 'Ex. 2 uses this code for every hacker, and below it can be tried on any list of numbers.',
+    dataL: 'numbers',
+    calc: 'compute',
+    errData: 'enter at least two numbers',
+    hEx2: 'Ex. 2 - sampling mean and variance',
+    intro: "m hackers each attack n systems and get one score between 0 and 10 for each system. The default score is the number of successful steps out of 10, each successful with probability p, so it is binomial(10, p) with mu = 10p and sigma^2 = 10p(1-p); the menu also offers a uniform score on {0, ..., 10} and a continuous score 10 Beta(2, 5). For every hacker Welford's recurrence gives the sampling mean and the sampling variance of the n scores.",
+    distL: 'score distribution',
+    optB: 'binomial(10, p)',
+    optU: 'uniform on {0, ..., 10}',
+    optBe: '10 Beta(2, 5)',
+    nB: p => `binomial(10, ${p})`,
+    nU: 'uniform {0, ..., 10}',
+    nBe: '10 Beta(2, 5)',
+    run: 'run',
+    hAvg: '1. averages over the m hackers against n',
+    avgNote: 'black: average of the sampling means (top) and of the sampling variances (bottom), red: mu and sigma^2',
+    hVar: '2. variability of the estimates against n',
+    varNote: 'log scale, dots: variance across the m hackers, lines: theory, sigma^2/n for the means and mu4/n - sigma^4 (n-3)/(n(n-1)) for the variances (mu4 = fourth central moment)',
+    notesH: 'notes',
+    notes: `<p>Conclusions. With the default values (p = 0.3, so mu = 3 and sigma^2 = 2.1) the average of the sampling means is 3.0005 and the average
+of the sampling variances is 2.1015, both within the Monte Carlo error printed next to them.
+Section 1 repeats the comparison for 40 values of n between 2 and 1000, and the agreement holds for every n, even for n = 2 (2.154 +- 0.065 against 2.1).
+The same holds for the other two distributions in the menu: 5.0029 against mu = 5 and 9.9977 against sigma^2 = 10 for the uniform score,
+2.8588 against 2.8571 and 2.5532 against 2.5510 for 10 Beta(2, 5).
+So the sample mean and the sample variance computed with n - 1 are unbiased estimators: E[mean] = mu and E[s^2] = sigma^2.</p>
+<p>Use in inferential statistics. In practice mu and sigma^2 are unknown and only one sample is available.
+Since the sample mean and the sample variance are unbiased, and their variance goes to zero as n grows (section 2),
+they can be used to estimate the population parameters from a single sample.
+This is the basis of inference: the standard error sigma/sqrt(n) of a mean is estimated as s/sqrt(n),
+and with it one builds confidence intervals such as mean +- 1.96 s/sqrt(n) and tests such as the t test.</p>
+<p>Effect of n on the variability. Section 2 shows that the variance of the sampling means follows sigma^2/n:
+with the default values it goes from 1.02 at n = 2 to 0.0021 at n = 1000, so four times more systems halve the standard deviation of a hacker's mean.
+The variance of the sampling variances, mu4/n - sigma^4 (n-3)/(n(n-1)), also falls like 1/n: from 8.83 at n = 2 to 0.0083 at n = 1000.
+Increasing the number of systems attempted by each hacker therefore makes both estimates more precise.</p>`,
+    errP: 'p must be strictly between 0 and 1',
+    errBig: 'n times m is too large for the browser (limit 1e7), reduce n or m',
+    head: (name, mu, s2, n, m) => `${name},  mu = ${mu},  sigma^2 = ${s2},  n = ${n},  m = ${m}`,
+    mcNote: 'the +- is the Monte Carlo error expected from m hackers, not a property of the estimators',
+    measured: 'measured',
+    theory: 'theory',
+    rMean: 'average of the sampling means',
+    rVar: 'average of the sampling variances',
+    pmTitle: 'average of the sampling means',
+    pvTitle: 'average of the sampling variances',
+    vvTitle: 'variance of the estimates across the hackers',
+    vMeans: 'Var(sampling mean)',
+    vVars: 'Var(sampling variance)'
   }
 },
 it: {
@@ -724,6 +789,71 @@ ma il punteggio reale si allontana comunque da zero come sqrt(n), quindi anche u
     samp: v => `  livello di campionamento 0.87/sqrt(m) = ${v}, la distanza che mostrerebbe anche un campione esattamente normale di questa dimensione`,
     rad: 'S_n/sqrt(n) ha già media 0 e varianza 1, quindi converge a N(0,1) senza bisogno di centrarlo',
     ber: 'S_n/sqrt(n) ha media sqrt(n)*p, che cresce, quindi per il limite normale standard serve la centratura vista sopra'
+  },
+  hw4: {
+    title: 'HW4 - Welford e media e varianza campionarie',
+    dl: 'scarica',
+    h1: 'HW4 - formule ricorsive di Welford, media campionaria e varianza campionaria',
+    hEx1: 'Ex. 1 - formule ricorsive di Welford',
+    deriv: `<p>La ricorsione di Knuth per la media. Sia M_k la media dei primi k valori. Poiché k M_k = (k-1) M_(k-1) + x_k,</p>
+<pre>M_k = M_(k-1) + (x_k - M_(k-1)) / k</pre>
+<p>La nuova media è quella vecchia corretta di una frazione 1/k dell'errore d_k = x_k - M_(k-1) che la vecchia media commette sul nuovo valore.</p>
+<p>Somma dei quadrati. Lo stesso procedimento si applica a SS_k = somma_(i=1..k) (x_i - M_k)^2 = somma_(i=1..k) x_i^2 - k M_k^2.
+Sottraendo la stessa espressione per k-1:</p>
+<pre>SS_k - SS_(k-1) = x_k^2 - k M_k^2 + (k-1) M_(k-1)^2</pre>
+<p>Si scrive x_k = M_(k-1) + d_k e M_k = M_(k-1) + d_k / k e si sviluppa. Tutti i termini che contengono M_(k-1) si annullano e resta solo d_k^2 - d_k^2 / k.
+Poiché x_k - M_k = d_k (k-1) / k, il risultato si può scrivere con i due errori, prima e dopo l'aggiornamento della media:</p>
+<pre>SS_k = SS_(k-1) + (x_k - M_(k-1)) (x_k - M_k)       SS_1 = 0</pre>
+<p>Varianza. La varianza campionaria è s_k^2 = SS_k / (k-1) per k >= 2. Dividendo la ricorsione per k-1 si ottiene la ricorsione per la varianza:</p>
+<pre>s_k^2 = (k-2)/(k-1) s_(k-1)^2 + d_k^2 / k</pre>
+<p>Codice. Per ogni nuovo valore x, con k che parte da 1, il nucleo dell'algoritmo sono poche righe:</p>`,
+    codeNote: "L'Ex. 2 usa questo codice per ogni hacker, e qui sotto si può provare su una lista di numeri qualsiasi.",
+    dataL: 'numeri',
+    calc: 'calcola',
+    errData: 'inserisci almeno due numeri',
+    hEx2: 'Ex. 2 - media e varianza campionarie',
+    intro: 'm hacker attaccano ciascuno n sistemi e ottengono un punteggio tra 0 e 10 per ogni sistema. Il punteggio di default è il numero di passi riusciti su 10, ognuno riuscito con probabilità p, quindi è una binomiale(10, p) con mu = 10p e sigma^2 = 10p(1-p); il menu offre anche un punteggio uniforme su {0, ..., 10} e un punteggio continuo 10 Beta(2, 5). Per ogni hacker la ricorsione di Welford dà la media e la varianza campionarie degli n punteggi.',
+    distL: 'distribuzione del punteggio',
+    optB: 'binomiale(10, p)',
+    optU: 'uniforme su {0, ..., 10}',
+    optBe: '10 Beta(2, 5)',
+    nB: p => `binomiale(10, ${p})`,
+    nU: 'uniforme {0, ..., 10}',
+    nBe: '10 Beta(2, 5)',
+    run: 'esegui',
+    hAvg: '1. medie sugli m hacker in funzione di n',
+    avgNote: 'nero: media delle medie campionarie (sopra) e delle varianze campionarie (sotto), rosso: mu e sigma^2',
+    hVar: '2. variabilità delle stime in funzione di n',
+    varNote: 'scala logaritmica, punti: varianza sugli m hacker, linee: teoria, sigma^2/n per le medie e mu4/n - sigma^4 (n-3)/(n(n-1)) per le varianze (mu4 = momento centrale del quarto ordine)',
+    notesH: 'note',
+    notes: `<p>Conclusioni. Con i valori di default (p = 0.3, quindi mu = 3 e sigma^2 = 2.1) la media delle medie campionarie è 3.0005 e la media
+delle varianze campionarie è 2.1015, entrambe entro l'errore Monte Carlo stampato accanto.
+La sezione 1 ripete il confronto per 40 valori di n tra 2 e 1000, e l'accordo vale per ogni n, anche per n = 2 (2.154 +- 0.065 contro 2.1).
+Lo stesso vale per le altre due distribuzioni del menu: 5.0029 contro mu = 5 e 9.9977 contro sigma^2 = 10 per il punteggio uniforme,
+2.8588 contro 2.8571 e 2.5532 contro 2.5510 per 10 Beta(2, 5).
+Quindi la media campionaria e la varianza campionaria calcolata con n - 1 sono stimatori non distorti: E[media] = mu ed E[s^2] = sigma^2.</p>
+<p>Utilità nella statistica inferenziale. In pratica mu e sigma^2 non sono noti ed è disponibile un solo campione.
+Poiché la media e la varianza campionarie sono non distorte, e la loro varianza tende a zero al crescere di n (sezione 2),
+si possono usare per stimare i parametri della popolazione da un solo campione.
+È la base dell'inferenza: l'errore standard sigma/sqrt(n) di una media si stima con s/sqrt(n),
+e con esso si costruiscono intervalli di confidenza come media +- 1.96 s/sqrt(n) e test come il test t.</p>
+<p>Effetto di n sulla variabilità. La sezione 2 mostra che la varianza delle medie campionarie segue sigma^2/n:
+con i valori di default passa da 1.02 a n = 2 a 0.0021 a n = 1000, quindi quadruplicando i sistemi si dimezza la deviazione standard della media di un hacker.
+Anche la varianza delle varianze campionarie, mu4/n - sigma^4 (n-3)/(n(n-1)), cala come 1/n: da 8.83 a n = 2 a 0.0083 a n = 1000.
+Aumentare il numero di sistemi attaccati da ogni hacker rende quindi più precise entrambe le stime.</p>`,
+    errP: 'p deve essere strettamente compreso tra 0 e 1',
+    errBig: 'n per m è troppo grande per il browser (limite 1e7), riduci n o m',
+    head: (name, mu, s2, n, m) => `${name},  mu = ${mu},  sigma^2 = ${s2},  n = ${n},  m = ${m}`,
+    mcNote: "il +- è l'errore Monte Carlo dovuto agli m hacker, non una proprietà degli stimatori",
+    measured: 'misurato',
+    theory: 'teoria',
+    rMean: 'media delle medie campionarie',
+    rVar: 'media delle varianze campionarie',
+    pmTitle: 'media delle medie campionarie',
+    pvTitle: 'media delle varianze campionarie',
+    vvTitle: 'varianza delle stime sugli hacker',
+    vMeans: 'Var(media campionaria)',
+    vVars: 'Var(varianza campionaria)'
   }
 }
 }
