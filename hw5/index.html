@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>HW5</title>
+<style>
+body{font:14px monospace;max-width:960px;margin:1em auto;padding:0 1em}
+input{width:4em}
+pre{white-space:pre-wrap}
+canvas{border:1px solid #aaa;max-width:100%;height:auto;margin:2px}
+</style>
+<script src="../localisation.js"></script>
+
+<p><a href="../hw1/">HW1</a> | <a href="../hw2/">HW2</a> | <a href="../hw2-b/">HW2-B</a> | <a href="../hw3/">HW3</a> | <a href="../hw4/">HW4</a> | <a href="../hw5/">HW5</a> |
+<select id=lang><option value=en>ENG</option><option value=it>ITA</option></select>
+<button id=dl data-t=dl></button></p>
+
+<h3 data-t=h1></h3>
+
+<h3 data-t=hEx1></h3>
+<div data-t=intro1></div>
+<p><span data-t=fnL></span> <select id=fn><option value=0 data-t=f0></option><option value=1 data-t=f1></option><option value=2 data-t=f2></option><option value=3 data-t=f3></option><option value=4 data-t=f4></option><option value=5 data-t=f5></option><option value=6 data-t=f6></option><option value=7 data-t=f7></option><option value=8 data-t=f8></option></select>
+<br>N <input id=N value=1000>
+K <input id=K value=1000>
+S <input id=S value=100000 style="width:6em">
+seed <input id=seed value=1>
+<button id=run1 data-t=run></button></p>
+<pre id=out1></pre>
+
+<h3 data-t=hConv></h3>
+<p data-t=convNote></p>
+<canvas id=conv width=620 height=220></canvas>
+
+<h3 data-t=hAll></h3>
+<p data-t=allNote></p>
+<pre id=all></pre>
+
+<h3 data-t=hEx2></h3>
+<div data-t=intro2></div>
+<p>x <input id=x value=1.5> <span data-t=simpL></span> n <input id=n value=100> <button id=run2 data-t=run></button></p>
+<pre id=out2></pre>
+
+<h3 data-t=hRef></h3>
+<p data-t=refNote></p>
+<pre id=ref></pre>
+
+<h3 data-t=hEff></h3>
+<p data-t=effNote></p>
+<pre id=eff></pre>
+<canvas id=simp width=620 height=200></canvas>
+
+<h3 data-t=notesH></h3>
+<div data-t=notes></div>
+
+<script>
+const $ = id => document.getElementById(id)
+let sink = 0
+const ex = x => x == 0 ? '0' : x.toExponential(1)
+
+let lang = 'en'
+try { lang = localStorage.getItem('lang') || 'en' } catch (e) {}
+const tr = () => LOC[lang].hw5
+
+function texts() {
+  document.documentElement.lang = lang
+  document.title = tr().title
+  $('lang').value = lang
+  document.querySelectorAll('[data-t]').forEach(e => e.innerHTML = tr()[e.dataset.t])
+}
+
+// outputs and charts are kept as functions of the text, so they can be redrawn in the other language
+const out = {}, charts = {}
+const show = id => $(id).textContent = (out[id] || []).map(f => typeof f == 'function' ? f(tr()) : f).join('\n')
+const put = (id, lines) => { out[id] = lines; show(id) }
+const keep = (id, f) => { charts[id] = f; f(tr()) }
+
+function rng(a) {
+  return () => {
+    a = a + 0x6D2B79F5 | 0
+    let t = Math.imul(a ^ a >>> 15, 1 | a)
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t
+    return ((t ^ t >>> 14) >>> 0) / 4294967296
+  }
+}
+
+function plot(id, title, xs, series, lo, hi) {
+  const c = $(id), g = c.getContext('2d'), x0 = 46, H = c.height - 34, W = c.width - x0 - 8
+  const xa = Math.log(xs[0]), xb = Math.log(xs[xs.length - 1])
+  const Y = v => 18 + H - Math.max(0, Math.min(1, (Math.log(Math.max(v, lo)) - Math.log(lo)) / (Math.log(hi) - Math.log(lo)))) * H
+  const X = v => x0 + (Math.log(v) - xa) / (xb - xa) * W
+  g.clearRect(0, 0, c.width, c.height); g.font = '11px monospace'
+  g.fillStyle = '#000'; g.fillText(title, 3, 12)
+  g.strokeStyle = '#ccc'; g.strokeRect(x0, 18, W, H)
+  g.fillText(hi.toExponential(0), 2, 24); g.fillText(lo.toExponential(0), 2, 18 + H)
+  g.fillText(xs[0], x0, 18 + H + 12); g.fillText(xs[xs.length - 1], c.width - 38, 18 + H + 12)
+  series.forEach((s, li) => {
+    g.fillStyle = s.color
+    s.v.forEach((y, i) => g.fillRect(X(xs[i]) - 1.5, Y(y) - 1.5, 3, 3))
+    g.fillText(s.name, x0 + 6, 30 + li * 12)
+  })
+}
+
+const sizes = (a, b, k) => [...new Set(Array.from({ length: k }, (_, i) => Math.round(a * (b / a) ** (i / (k - 1)))))]
+
+// es. 1
+
+const gcd = (a, b) => b ? gcd(b, a % b) : a
+// f(x) at a generic point; for the two pathological functions fr(p, q) at the rational point p/q
+// (every floating point number is rational, so a generic point stands for an irrational one)
+const F = [
+  { s: 'sin(x)', a: 0, b: Math.PI, f: Math.sin, I: 2 },
+  { s: 'x^2', a: 0, b: 1, f: x => x * x, I: 1 / 3 },
+  { s: '1 | 3', a: 0, b: 1, f: x => x < .5 ? 1 : 3, I: 2 },
+  { s: '|x - 0.5|', a: 0, b: 1, f: x => Math.abs(x - .5), I: .25 },
+  { s: '1/sqrt(x)', a: 0, b: 1, f: x => 1 / Math.sqrt(x), I: 2 },
+  { s: '1 | 0', a: 0, b: 1, f: x => x < .5 ? 1 : 0, I: .5 },
+  { s: 'sin(x)/x', a: 0, b: Math.PI, f: x => x ? Math.sin(x) / x : 1, I: 1.8519370519824662 },
+  { s: 'Dirichlet', a: 0, b: 1, f: x => 0, fr: (p, q) => 1, I: 0 },
+  { s: 'Thomae', a: 0, b: 1, f: x => 0, fr: (p, q) => 1 / q, I: 0 }
+]
+
+// riemann: N subintervals, tag in the middle of each one (an exact fraction (2i+1)/(2N) for the pathological functions)
+function riemannMid(F, N) {
+  const h = (F.b - F.a) / N
+  let s = 0
+  for (let i = 0; i < N; i++) {
+    if (F.fr) { const p = 2 * i + 1, q = 2 * N, g = gcd(p, q); s += F.fr(p / g, q / g) }
+    else s += F.f(F.a + (i + .5) * h)
+  }
+  return s * h
+}
+
+// riemann with a random tag in each subinterval
+function riemannRand(F, N, r) {
+  const h = (F.b - F.a) / N
+  let s = 0
+  for (let i = 0; i < N; i++) s += F.f(F.a + (i + r()) * h)
+  return s * h
+}
+
+// lebesgue: the measure of each level set is estimated from S stratified random points of the domain
+function samples(F, S, r) {
+  const v = new Float64Array(S), h = (F.b - F.a) / S
+  for (let i = 0; i < S; i++) v[i] = F.f(F.a + (i + (r() || .5)) * h)
+  return { v, w: h }
+}
+
+// range [lo, hi] cut into K levels of height d; the lower sum gives each level set the value of the bottom of its level
+function lebesgue(sm, K) {
+  const { v, w } = sm
+  let lo = Infinity, hi = -Infinity
+  for (const y of v) { if (y < lo) lo = y; if (y > hi) hi = y }
+  if (hi == lo) return lo * w * v.length
+  const d = (hi - lo) / K, mu = new Float64Array(K + 1)
+  for (const y of v) mu[Math.min(K, Math.floor((y - lo) / d))] += w
+  let s = 0
+  for (let j = 0; j <= K; j++) s += (lo + j * d) * mu[j]
+  return s
+}
+
+function ex1() {
+  const int = (id, lo, hi) => { const v = Math.round(+$(id).value); return v >= lo && v <= hi ? v : null }
+  const N = int('N', 1, 1e6), K = int('K', 1, 1e6), S = int('S', 10, 2e6), seed = Math.round(+$('seed').value) || 1
+  if (N == null || K == null || S == null) return put('out1', [t => t.errSize])
+  const f = F[+$('fn').value], now = () => performance.now()
+  let t0 = now()
+  const rm = riemannMid(f, N), t1 = now(), rr = riemannRand(f, N, rng(seed + 1)), t2 = now()
+  const sm = samples(f, S, rng(seed)), le = lebesgue(sm, K), t3 = now()
+  const row = (name, v, ev, ms) => t => name(t).padEnd(40) + v.toFixed(10).padStart(16) + ex(v - f.I).padStart(11) + String(ev).padStart(11) + ms.toFixed(1).padStart(10)
+  put('out1', [
+    t => t.head(t['f' + $('fn').value], f.I.toFixed(10)),
+    ...(f.s == 'Dirichlet' ? [t => t.dirNote] : f.s == '1/sqrt(x)' ? [t => t.sqrtNote] : []),
+    '',
+    t => ''.padEnd(40) + t.value.padStart(16) + t.error.padStart(11) + t.evals.padStart(11) + t.ms.padStart(10),
+    row(t => t.rMid(N), rm, N, t1 - t0),
+    row(t => t.rRand(N), rr, N, t2 - t1),
+    row(t => t.leb(K, S), le, S, t3 - t2)
+  ])
+
+  // error against the number of parts: N subintervals for riemann, K levels for lebesgue (same S samples)
+  const xs = sizes(2, Math.max(N, K, 10), 30), floor = 1e-16
+  const er = xs.map(n => Math.max(floor, Math.abs(riemannMid(f, n) - f.I)))
+  const el = xs.map(k => Math.max(floor, Math.abs(lebesgue(sm, k) - f.I)))
+  keep('conv', t => plot('conv', t.convTitle, xs, [
+    { v: er, color: '#000', name: t.convR }, { v: el, color: 'red', name: t.convL(S) }], floor, 1e3))
+
+  // all the functions with the same N, K, S
+  put('all', [
+    t => 'f'.padEnd(12) + t.exact.padStart(14) + t.colMid.padStart(14) + t.colRand.padStart(14) + t.colLeb.padStart(14),
+    ...F.map(g => {
+      const v = [g.I, riemannMid(g, N), riemannRand(g, N, rng(seed + 1)), lebesgue(samples(g, S, rng(seed)), K)]
+      return g.s.padEnd(12) + v.map(y => y.toFixed(6).padStart(14)).join('')
+    })])
+}
+
+// es. 2
+
+const SQ2PI = Math.sqrt(2 * Math.PI), phi = x => Math.exp(-x * x / 2) / SQ2PI
+
+// 1. simpson's rule for Phi(x) = 1/2 + integral from 0 to x of phi(t) dt, n intervals
+function simpson(x, n) {
+  if (n % 2) n++
+  const h = x / n
+  let s = phi(0) + phi(x)
+  for (let i = 1; i < n; i++) s += (i % 2 ? 4 : 2) * phi(i * h)
+  return .5 + s * h / 3
+}
+
+// 2. power series of erf: Phi(x) = 1/2 + 1/sqrt(2 pi) sum (-1)^k x^(2k+1) / (2^k k! (2k+1))
+function series(x) {
+  let t = x, s = x, k = 0
+  while (Math.abs(t) > 1e-17 * Math.abs(s) && k < 500) { k++; t *= -x * x / (2 * k); s += t / (2 * k + 1) }
+  return { v: .5 + s / SQ2PI, k: k + 1 }
+}
+
+// 3. erf approximation 7.1.26 of Abramowitz and Stegun, Phi(x) = (1 + erf(x/sqrt(2))) / 2
+function asErf(x) {
+  const z = Math.abs(x) / Math.SQRT2, t = 1 / (1 + .3275911 * z)
+  const e = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - .284496736) * t + .254829592) * t * Math.exp(-z * z)
+  return .5 * (1 + Math.sign(x) * e)
+}
+
+// 4. proposed method: series with positive terms for |x| < 3, continued fraction for the tail when |x| >= 3
+function cdf(x) {
+  const a = Math.abs(x)
+  let q, k = 0
+  if (a < 3) {
+    let t = a, s = a
+    while (t > 1e-17 * s) { k++; t *= a * a / (2 * k + 1); s += t }
+    q = .5 - phi(a) * s
+    k++
+  } else {
+    let f = 0
+    for (k = 60; k >= 1; k--) f = k / (a + f)
+    q = phi(a) / (a + f)
+    k = 60
+  }
+  return { v: x >= 0 ? 1 - q : q, q, k }
+}
+
+// trusted reference from Wikipedia, "68-95-99.7 rule": P(|Z| <= n) for n = 1..7, so Phi(n) = (1 + P) / 2
+const WIKI = ['0.682689492137086', '0.954499736103642', '0.997300203936740', '0.999936657516334', '0.999999426696856', '0.999999998026825', '0.999999999997440']
+const REF = [[0, .5], ...WIKI.map((p, i) => [i + 1, (1 + +p) / 2])]
+
+const M = [
+  { k: 'm1', f: (x, n) => simpson(x, n), ops: n => n + 1 },
+  { k: 'm2', f: x => series(x).v, ops: x => series(x).k },
+  { k: 'm3', f: x => asErf(x), ops: () => 1 },
+  { k: 'm4', f: x => cdf(x).v, ops: x => cdf(x).k }
+]
+
+function ex2() {
+  const x = +$('x').value, n = Math.round(+$('n').value)
+  if (!Number.isFinite(x) || !(n >= 2 && n <= 1e6)) return put('out2', [t => t.errX])
+  const best = cdf(x).v
+  put('out2', [
+    t => ''.padEnd(28) + 'Phi(x)'.padStart(22) + t.diff.padStart(14) + t.terms.padStart(10),
+    ...M.map(m => {
+      const v = m.f(x, n), ops = m.k == 'm1' ? m.ops(n % 2 ? n + 1 : n) : m.ops(x)
+      return t => t[m.k].padEnd(28) + v.toPrecision(16).padStart(22) + ex(v - best).padStart(14) + String(ops).padStart(10)
+    })])
+
+  // comparison with the reference
+  put('ref', [
+    t => '   x' + t.refCol.padStart(20) + t.m4s.padStart(20) + ('err ' + t.m4s).padStart(14) + 'err Simpson'.padStart(13) + ('err ' + t.m2s).padStart(12) + 'err A&S'.padStart(10),
+    ...REF.map(([x, r]) => String(x).padStart(4) + r.toFixed(16).padStart(20) + cdf(x).v.toFixed(16).padStart(20) +
+      ex(cdf(x).v - r).padStart(14) + ex(simpson(x, n) - r).padStart(13) + ex(series(x).v - r).padStart(12) + ex(asErf(x) - r).padStart(10))])
+
+  // efficiency: time per evaluation over many points, and the largest error at the reference points
+  const pts = Array.from({ length: 200 }, (_, i) => -7 + 14 * i / 199)
+  put('eff', [
+    t => ''.padEnd(28) + t.usPer.padStart(14) + t.maxErr.padStart(14),
+    ...M.map(m => {
+      const reps = m.k == 'm1' ? 20 : 200, t0 = performance.now()
+      let s = 0
+      for (let r = 0; r < reps; r++) for (const p of pts) s += m.f(p, n)
+      sink += s
+      const us = (performance.now() - t0) * 1000 / (reps * pts.length)
+      const err = Math.max(...REF.map(([x, r]) => Math.abs(m.f(x, n) - r)))
+      return t => t[m.k].padEnd(28) + us.toFixed(3).padStart(14) + ex(err).padStart(14)
+    })])
+
+  // simpson: error at x = 3 against the number of intervals
+  const ns = sizes(2, 2000, 30).map(v => v + v % 2), r3 = REF[3][1]
+  const es = ns.map(k => Math.max(1e-17, Math.abs(simpson(3, k) - r3)))
+  keep('simp', t => plot('simp', t.simpTitle, ns, [{ v: es, color: '#000', name: t.simpName }], 1e-17, 1))
+}
+
+$('lang').onchange = () => {
+  lang = $('lang').value
+  try { localStorage.setItem('lang', lang) } catch (e) {}
+  texts()
+  Object.keys(out).forEach(show)
+  Object.values(charts).forEach(f => f(tr()))
+}
+// the downloaded page loads localisation.js from its own folder
+$('dl').onclick = async () => {
+  const save = (blob, name) => { const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = name; l.click() }
+  const page = (await (await fetch(location.href)).text()).replace('../localisation.js', 'localisation.js')
+  save(new Blob([page], {type: 'text/html'}), 'hw5.html')
+  save(await (await fetch('../localisation.js')).blob(), 'localisation.js')
+}
+
+for (const id of ['fn', 'N', 'K', 'S', 'seed']) $(id).onchange = ex1
+$('run1').onclick = ex1
+for (const id of ['x', 'n']) $(id).onchange = ex2
+$('run2').onclick = ex2
+texts()
+ex1()
+ex2()
+</script>

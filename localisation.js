@@ -426,6 +426,125 @@ Increasing the number of systems attempted by each hacker therefore makes both e
     vvTitle: 'variance of the estimates across the hackers',
     vMeans: 'Var(sampling mean)',
     vVars: 'Var(sampling variance)'
+  },
+  hw5: {
+    title: 'HW5 - Riemann and Lebesgue, normal CDF',
+    dl: 'download',
+    h1: 'HW5 - Riemann and Lebesgue integration, numerical computation of the normal CDF',
+    hEx1: 'Es. 1 - Riemann and Lebesgue integration',
+    intro1: `<p>Riemann: the domain [a, b] is cut into N subintervals of width h, and the integral is approximated by h times the sum of f at a tag in each subinterval,
+the midpoint or a random point. Lebesgue: the range of f is cut into K levels of height d, each level set {x : y_j <= f(x) < y_j + d}, the preimage of a level,
+gets the value y_j at the bottom of the level, and the integral is approximated by the sum of y_j times the measure of its preimage.
+The measures are estimated with S random points, one in each of S equal cells of the domain.</p>
+<p>Every floating point number is rational, so the Dirichlet and Thomae functions cannot be evaluated literally:
+the midpoint tags (2i+1)/(2N) are treated as exact fractions p/q, while random points are treated as irrational, as they are with probability 1.</p>`,
+    fnL: 'function',
+    f0: 'sin(x), x in [0, pi]',
+    f1: 'x^2, x in [0, 1]',
+    f2: '1 if x < 0.5, 3 if x >= 0.5, x in [0, 1]',
+    f3: '|x - 0.5|, x in [0, 1]',
+    f4: '1/sqrt(x), x in (0, 1]',
+    f5: '1 if x < 0.5, 0 if x >= 0.5, x in [0, 1]',
+    f6: 'sin(x)/x, x in [0, pi]',
+    f7: 'Dirichlet: 1 if x is rational, 0 if irrational, x in [0, 1]',
+    f8: 'Thomae: 1/q if x = p/q in lowest terms, 0 if irrational, x in [0, 1]',
+    run: 'run',
+    hConv: '1. error against the number of parts',
+    convNote: 'log scale, black: Riemann sum with midpoints against N, red: Lebesgue lower sum against K with the same S points',
+    hAll: '2. all the functions',
+    allNote: 'values with the N, K and S above; the exact column is the Lebesgue integral (for Dirichlet the Riemann integral does not exist)',
+    hEx2: 'Es. 2 - numerical computation of the normal CDF',
+    intro2: `<p>Phi(x) = 1/2 + integral from 0 to x of phi(t) dt, with phi(t) = exp(-t^2/2) / sqrt(2 pi). The page compares four methods:</p>
+<pre>1. Simpson's rule     integral of phi on [0, x] with n intervals
+2. erf power series   Phi(x) = 1/2 + 1/sqrt(2 pi) sum_k (-1)^k x^(2k+1) / (2^k k! (2k+1))
+3. erf approximation  Phi(x) = (1 + erf(x/sqrt(2))) / 2, with erf from formula 7.1.26 of Abramowitz and Stegun
+4. proposed method    |x| < 3:   Phi(|x|) = 1/2 + phi(x) sum_k |x|^(2k+1) / (1 * 3 * 5 * ... * (2k+1))
+                      |x| >= 3:  1 - Phi(|x|) = phi(x) / (|x| + 1/(|x| + 2/(|x| + 3/(|x| + ...)))), 60 terms
+                      and Phi(-x) = 1 - Phi(x)</pre>`,
+    simpL: 'Simpson:',
+    hRef: '1. comparison with the reference',
+    refNote: 'reference: Phi(n) = (1 + P(|Z| <= n)) / 2, with the 15-digit values of P listed in the Wikipedia article "68-95-99.7 rule"; Simpson uses the n above; errors are value minus reference',
+    hEff: '2. accuracy and efficiency',
+    effNote: 'time per evaluation averaged over 200 points in [-7, 7] (it depends on the computer), and largest absolute error at the reference points; below, the error of Simpson\'s rule at x = 3 against n (log scale)',
+    notesH: 'notes',
+    notes: `<p>Es. 1, the functions. The collection is the list of the assignment: seven ordinary functions and the two pathological ones, Dirichlet and Thomae.
+Section 2 gives the three approximations of every integral with the default values N = K = 1000 and S = 100000.</p>
+<p>Es. 1, accuracy and convergence. For smooth functions the Riemann sum with midpoints converges like 1/N^2: for sin(x) the error is 8.2e-5, 8.2e-7 and 8.2e-9
+with N = 100, 1000 and 10000. The Lebesgue lower sum converges like 1/K and always from below, because each level set gets the value at the bottom of its level:
+for sin(x) the error is -1.6e-2, -1.6e-3 and -1.6e-4 with K = 100, 1000 and 10000. Its error comes from the height of the levels, not from S:
+with S = 1000000 and K = 10000 it is still -1.6e-4.</p>
+<p>Es. 1, computational efficiency. The Riemann sum needs N evaluations of f: for sin(x) N = 1000 takes about 0.2 ms and gives an error below 1e-6.
+The Lebesgue sum needs to know the measure of every preimage, which here means evaluating f at S points of the whole domain and sorting the values into the K levels:
+about 10 ms with S = 100000, for an error of 1.6e-3. Reaching 1e-6 would need about a million levels and at least as many points.
+For the usual functions the Riemann approach is therefore much cheaper; the Lebesgue approach becomes cheap only when the preimages are known exactly.</p>
+<p>Es. 1, Riemann-integrable functions. For sin(x), x^2, the two step functions, |x - 0.5|, sin(x)/x and the Thomae function the three columns of section 2
+agree with the exact value, and the differences go to zero as N and K grow: the two approaches converge to the same value, as the theory says
+(when the Riemann integral exists, it is equal to the Lebesgue integral).</p>
+<p>Es. 1, functions where the two approaches behave differently.
+The step functions are simple functions, so the Lebesgue sum is exact for every K, while the Riemann sum is exact only when a partition point falls on 0.5:
+with N = 101 the error is 9.9e-3 for the 1/3 step. |x - 0.5| is similar: the midpoint rule is exact for even N, but with N = 101 the error is 2.5e-5.
+1/sqrt(x) is unbounded, so its Riemann integral exists only as an improper integral: the midpoint sums converge slowly, like 1/sqrt(N)
+(errors 6.0e-2, 1.9e-2 and 6.0e-3 with N = 100, 1000 and 10000), and the Lebesgue sum with equal levels is even worse, because the range
+goes from 1 to several hundred and the levels are coarse (errors 0.70, 0.18 and 0.022 with K = 100, 1000 and 10000).
+The Dirichlet function shows the real difference: Riemann sums with rational tags give 1 for every N and with irrational tags give 0,
+so they do not converge and the Riemann integral does not exist, while for Lebesgue the rationals are countable, have measure 0, and the integral is 0.
+The Thomae function is Riemann integrable with integral 0, but the Riemann sums with rational tags approach 0 slowly (1.3e-2, 1.7e-3 and 2.1e-4 with N = 100, 1000 and 10000),
+while the Lebesgue sum gives 0 at once, because f is 0 outside a set of measure 0.</p>
+<p>Es. 2, the method. The proposed method (method 4) uses the series Phi(x) = 1/2 + phi(x) (x + x^3/3 + x^5/(3*5) + ...) for |x| &lt; 3.
+All its terms are positive, so there is no cancellation, and it needs at most 33 terms. For |x| >= 3 it uses Laplace's continued fraction,
+which gives the tail 1 - Phi(x) directly, so the small probabilities in the tails keep their relative accuracy. 60 terms are enough from x = 3 on.</p>
+<p>Es. 2, comparison with the reference. The reference values are Phi(n) = (1 + P(|Z| &lt;= n)) / 2 for n = 0, ..., 7, with P taken from the Wikipedia article
+"68-95-99.7 rule", which gives it with 15 decimals, so the reference itself is accurate to about 5e-16. Method 4 agrees with every reference value within 3.3e-16,
+so its error is at the level of the reference and of double precision.</p>
+<p>Es. 2, accuracy and efficiency of the approaches. Times are measured in the browser on the computer used for this homework.
+Simpson's rule with n = 100 has a largest error of 3.6e-10 and takes about 1.8 microseconds per value, because it evaluates phi n + 1 times;
+its error falls like 1/n^4 (section 2): at x = 3 it is 3.6e-10 with n = 100 and 3.6e-14 with n = 1000.
+The power series of erf is exact for small x, but its terms alternate in sign and become much larger than the result (about 2e8 at x = 7),
+so rounding errors are amplified: the error grows from 1e-16 at x &lt;= 3 to 3.6e-8 at x = 7. The erf approximation of Abramowitz and Stegun is the fastest,
+about 0.05 microseconds, but its error is fixed by the formula (up to 1.5e-7 for erf) and reaches 6.9e-8 at the reference points.
+Method 4 takes between 0.2 and 0.3 microseconds and is accurate to double precision everywhere, so it is the most efficient of the four for full accuracy.</p>
+<p>Es. 2, why Phi is not elementary. Phi is an antiderivative of phi(x) = exp(-x^2/2) / sqrt(2 pi). Liouville's theorem (1835) gives a criterion for
+integrals of the form f(x) exp(g(x)) with f and g rational: the antiderivative is an elementary function only if there is a rational function R with f = R' + R g'.
+Here f = 1 and g = -x^2/2, so R would have to satisfy R' - x R = 1. If R is a polynomial of degree d, R' - x R has degree d + 1 >= 1 and cannot be the constant 1.
+If R has a pole of order m at some point, R' has a pole of order m + 1 there and x R one of order at most m, so R' - x R still has a pole.
+No rational R exists, so exp(-x^2/2) has no elementary antiderivative, and Phi cannot be written with a finite combination of polynomials, exponentials, logarithms,
+roots and trigonometric functions.</p>
+<p>Es. 2, the error function. erf(x) = 2/sqrt(pi) times the integral from 0 to x of exp(-t^2) dt is defined as a new function exactly to give a name to this integral,
+and with it the CDF has an exact closed form, Phi(x) = (1 + erf(x / sqrt(2))) / 2. This moves the problem but does not solve it numerically:
+erf is not elementary either, so its values still have to be computed with series, continued fractions or rational approximations, which is what libraries do
+(JavaScript has no built-in erf at all). Methods 2, 3 and 4 are exactly such computations, and method 1 goes back to the integral itself.</p>`,
+    errSize: 'N and K must be between 1 and 1e6, S between 10 and 2e6',
+    head: (name, I) => `${name},  exact integral = ${I}`,
+    dirNote: 'the Riemann integral does not exist: 0 is the Lebesgue integral',
+    sqrtNote: 'f is unbounded, so 2 is an improper Riemann integral',
+    value: 'value',
+    error: 'error',
+    evals: 'f evals',
+    ms: 'ms',
+    rMid: N => `Riemann, midpoints, N = ${N}`,
+    rRand: N => `Riemann, random tags, N = ${N}`,
+    leb: (K, S) => `Lebesgue, K = ${K}, S = ${S}`,
+    convTitle: 'absolute error against the number of parts (1e-16 = exact)',
+    convR: 'Riemann, N subintervals',
+    convL: S => `Lebesgue, K levels, S = ${S}`,
+    exact: 'exact',
+    colMid: 'R. midpoints',
+    colRand: 'R. random',
+    colLeb: 'Lebesgue',
+    errX: 'x must be a number and n between 2 and 1e6',
+    diff: 'minus m. 4',
+    terms: 'terms',
+    m1: '1. Simpson',
+    m2: '2. erf power series',
+    m3: '3. erf approximation (A&S)',
+    m4: '4. proposed method',
+    refCol: 'reference',
+    m4s: 'method 4',
+    m2s: 'series',
+    usPer: 'us / eval',
+    maxErr: 'max error',
+    simpTitle: "Simpson's rule, absolute error at x = 3 against n",
+    simpName: 'measured'
   }
 },
 it: {
@@ -854,6 +973,125 @@ Aumentare il numero di sistemi attaccati da ogni hacker rende quindi più precis
     vvTitle: 'varianza delle stime sugli hacker',
     vMeans: 'Var(media campionaria)',
     vVars: 'Var(varianza campionaria)'
+  },
+  hw5: {
+    title: 'HW5 - Riemann e Lebesgue, CDF normale',
+    dl: 'scarica',
+    h1: 'HW5 - integrazione di Riemann e di Lebesgue, calcolo numerico della CDF normale',
+    hEx1: 'Es. 1 - integrazione di Riemann e di Lebesgue',
+    intro1: `<p>Riemann: il dominio [a, b] viene diviso in N sottointervalli di ampiezza h, e l'integrale si approssima con h per la somma di f in un punto di ciascun sottointervallo,
+il punto medio o un punto casuale. Lebesgue: il codominio di f viene diviso in K livelli di altezza d, ogni insieme di livello {x : y_j <= f(x) < y_j + d}, la controimmagine di un livello,
+riceve il valore y_j del fondo del livello, e l'integrale si approssima con la somma di y_j per la misura della sua controimmagine.
+Le misure sono stimate con S punti casuali, uno in ciascuna di S celle uguali del dominio.</p>
+<p>Ogni numero in virgola mobile è razionale, quindi le funzioni di Dirichlet e di Thomae non si possono valutare alla lettera:
+i punti medi (2i+1)/(2N) sono trattati come frazioni esatte p/q, mentre i punti casuali sono trattati come irrazionali, come lo sono con probabilità 1.</p>`,
+    fnL: 'funzione',
+    f0: 'sin(x), x in [0, pi]',
+    f1: 'x^2, x in [0, 1]',
+    f2: '1 se x < 0.5, 3 se x >= 0.5, x in [0, 1]',
+    f3: '|x - 0.5|, x in [0, 1]',
+    f4: '1/sqrt(x), x in (0, 1]',
+    f5: '1 se x < 0.5, 0 se x >= 0.5, x in [0, 1]',
+    f6: 'sin(x)/x, x in [0, pi]',
+    f7: 'Dirichlet: 1 se x è razionale, 0 se irrazionale, x in [0, 1]',
+    f8: 'Thomae: 1/q se x = p/q ridotta ai minimi termini, 0 se irrazionale, x in [0, 1]',
+    run: 'esegui',
+    hConv: '1. errore in funzione del numero di parti',
+    convNote: 'scala logaritmica, nero: somma di Riemann con i punti medi in funzione di N, rosso: somma inferiore di Lebesgue in funzione di K con gli stessi S punti',
+    hAll: '2. tutte le funzioni',
+    allNote: "valori con N, K e S impostati sopra; la colonna esatto è l'integrale di Lebesgue (per Dirichlet l'integrale di Riemann non esiste)",
+    hEx2: 'Es. 2 - calcolo numerico della CDF normale',
+    intro2: `<p>Phi(x) = 1/2 + integrale da 0 a x di phi(t) dt, con phi(t) = exp(-t^2/2) / sqrt(2 pi). La pagina confronta quattro metodi:</p>
+<pre>1. regola di Simpson     integrale di phi su [0, x] con n intervalli
+2. serie di potenze erf  Phi(x) = 1/2 + 1/sqrt(2 pi) somma_k (-1)^k x^(2k+1) / (2^k k! (2k+1))
+3. approssimazione erf   Phi(x) = (1 + erf(x/sqrt(2))) / 2, con erf dalla formula 7.1.26 di Abramowitz e Stegun
+4. metodo proposto       |x| < 3:   Phi(|x|) = 1/2 + phi(x) somma_k |x|^(2k+1) / (1 * 3 * 5 * ... * (2k+1))
+                         |x| >= 3:  1 - Phi(|x|) = phi(x) / (|x| + 1/(|x| + 2/(|x| + 3/(|x| + ...)))), 60 termini
+                         e Phi(-x) = 1 - Phi(x)</pre>`,
+    simpL: 'Simpson:',
+    hRef: '1. confronto con il riferimento',
+    refNote: 'riferimento: Phi(n) = (1 + P(|Z| <= n)) / 2, con i valori di P a 15 cifre della voce di Wikipedia "68-95-99.7 rule"; Simpson usa l\'n impostato sopra; gli errori sono valore meno riferimento',
+    hEff: '2. accuratezza ed efficienza',
+    effNote: "tempo per valutazione medio su 200 punti in [-7, 7] (dipende dal computer), ed errore assoluto massimo nei punti di riferimento; sotto, l'errore della regola di Simpson a x = 3 in funzione di n (scala logaritmica)",
+    notesH: 'note',
+    notes: `<p>Es. 1, le funzioni. La collezione è l'elenco della traccia: sette funzioni ordinarie e le due patologiche, Dirichlet e Thomae.
+La sezione 2 riporta le tre approssimazioni di ogni integrale con i valori di default N = K = 1000 e S = 100000.</p>
+<p>Es. 1, accuratezza e convergenza. Per le funzioni regolari la somma di Riemann con i punti medi converge come 1/N^2: per sin(x) l'errore è 8.2e-5, 8.2e-7 e 8.2e-9
+con N = 100, 1000 e 10000. La somma inferiore di Lebesgue converge come 1/K e sempre dal basso, perché ogni insieme di livello riceve il valore del fondo del suo livello:
+per sin(x) l'errore è -1.6e-2, -1.6e-3 e -1.6e-4 con K = 100, 1000 e 10000. Il suo errore dipende dall'altezza dei livelli, non da S:
+con S = 1000000 e K = 10000 resta -1.6e-4.</p>
+<p>Es. 1, efficienza computazionale. La somma di Riemann richiede N valutazioni di f: per sin(x) N = 1000 richiede circa 0.2 ms e dà un errore sotto 1e-6.
+La somma di Lebesgue deve conoscere la misura di ogni controimmagine, cioè qui valutare f in S punti di tutto il dominio e distribuire i valori nei K livelli:
+circa 10 ms con S = 100000, per un errore di 1.6e-3. Per arrivare a 1e-6 servirebbero circa un milione di livelli e almeno altrettanti punti.
+Per le funzioni usuali l'approccio di Riemann è quindi molto più economico; quello di Lebesgue diventa economico solo quando le controimmagini sono note esattamente.</p>
+<p>Es. 1, funzioni integrabili secondo Riemann. Per sin(x), x^2, le due funzioni a gradino, |x - 0.5|, sin(x)/x e la funzione di Thomae le tre colonne della sezione 2
+coincidono con il valore esatto, e le differenze tendono a zero al crescere di N e K: i due approcci convergono allo stesso valore, come dice la teoria
+(quando l'integrale di Riemann esiste, è uguale all'integrale di Lebesgue).</p>
+<p>Es. 1, funzioni per cui i due approcci si comportano diversamente.
+Le funzioni a gradino sono funzioni semplici, quindi la somma di Lebesgue è esatta per ogni K, mentre la somma di Riemann è esatta solo quando un punto della partizione cade in 0.5:
+con N = 101 l'errore è 9.9e-3 per il gradino 1/3. |x - 0.5| è simile: la regola del punto medio è esatta per N pari, ma con N = 101 l'errore è 2.5e-5.
+1/sqrt(x) è illimitata, quindi il suo integrale di Riemann esiste solo come integrale improprio: le somme con i punti medi convergono lentamente, come 1/sqrt(N)
+(errori 6.0e-2, 1.9e-2 e 6.0e-3 con N = 100, 1000 e 10000), e la somma di Lebesgue con livelli uguali va ancora peggio, perché il codominio
+va da 1 a diverse centinaia e i livelli sono grossolani (errori 0.70, 0.18 e 0.022 con K = 100, 1000 e 10000).
+La funzione di Dirichlet mostra la vera differenza: le somme di Riemann con punti razionali danno 1 per ogni N e con punti irrazionali danno 0,
+quindi non convergono e l'integrale di Riemann non esiste, mentre per Lebesgue i razionali sono numerabili, hanno misura 0, e l'integrale è 0.
+La funzione di Thomae è integrabile secondo Riemann con integrale 0, ma le somme di Riemann con punti razionali si avvicinano a 0 lentamente (1.3e-2, 1.7e-3 e 2.1e-4 con N = 100, 1000 e 10000),
+mentre la somma di Lebesgue dà subito 0, perché f vale 0 fuori da un insieme di misura 0.</p>
+<p>Es. 2, il metodo. Il metodo proposto (metodo 4) usa la serie Phi(x) = 1/2 + phi(x) (x + x^3/3 + x^5/(3*5) + ...) per |x| &lt; 3.
+Tutti i suoi termini sono positivi, quindi non ci sono cancellazioni, e servono al massimo 33 termini. Per |x| >= 3 usa la frazione continua di Laplace,
+che dà direttamente la coda 1 - Phi(x), così le piccole probabilità nelle code mantengono la loro precisione relativa. Da x = 3 in poi bastano 60 termini.</p>
+<p>Es. 2, confronto con il riferimento. I valori di riferimento sono Phi(n) = (1 + P(|Z| &lt;= n)) / 2 per n = 0, ..., 7, con P preso dalla voce di Wikipedia
+"68-95-99.7 rule", che lo riporta con 15 decimali, quindi il riferimento stesso è accurato a circa 5e-16. Il metodo 4 coincide con ogni valore di riferimento entro 3.3e-16,
+quindi il suo errore è al livello del riferimento e della doppia precisione.</p>
+<p>Es. 2, accuratezza ed efficienza degli approcci. I tempi sono misurati nel browser sul computer usato per l'homework.
+La regola di Simpson con n = 100 ha un errore massimo di 3.6e-10 e richiede circa 1.8 microsecondi per valore, perché valuta phi n + 1 volte;
+il suo errore cala come 1/n^4 (sezione 2): a x = 3 è 3.6e-10 con n = 100 e 3.6e-14 con n = 1000.
+La serie di potenze di erf è esatta per x piccoli, ma i suoi termini hanno segno alterno e diventano molto più grandi del risultato (circa 2e8 a x = 7),
+quindi gli errori di arrotondamento vengono amplificati: l'errore passa da 1e-16 per x &lt;= 3 a 3.6e-8 a x = 7. L'approssimazione di erf di Abramowitz e Stegun è la più veloce,
+circa 0.05 microsecondi, ma il suo errore è fissato dalla formula (fino a 1.5e-7 per erf) e arriva a 6.9e-8 nei punti di riferimento.
+Il metodo 4 richiede tra 0.2 e 0.3 microsecondi ed è accurato alla doppia precisione ovunque, quindi è il più efficiente dei quattro a piena precisione.</p>
+<p>Es. 2, perché Phi non è elementare. Phi è una primitiva di phi(x) = exp(-x^2/2) / sqrt(2 pi). Il teorema di Liouville (1835) dà un criterio per
+gli integrali della forma f(x) exp(g(x)) con f e g razionali: la primitiva è una funzione elementare solo se esiste una funzione razionale R con f = R' + R g'.
+Qui f = 1 e g = -x^2/2, quindi R dovrebbe soddisfare R' - x R = 1. Se R è un polinomio di grado d, R' - x R ha grado d + 1 >= 1 e non può essere la costante 1.
+Se R ha un polo di ordine m in un punto, lì R' ha un polo di ordine m + 1 e x R uno di ordine al più m, quindi R' - x R ha ancora un polo.
+Non esiste alcuna R razionale, quindi exp(-x^2/2) non ha una primitiva elementare, e Phi non si può scrivere come combinazione finita di polinomi, esponenziali, logaritmi,
+radici e funzioni trigonometriche.</p>
+<p>Es. 2, la funzione d'errore. erf(x) = 2/sqrt(pi) per l'integrale da 0 a x di exp(-t^2) dt è definita come nuova funzione proprio per dare un nome a questo integrale,
+e con essa la CDF ha una forma chiusa esatta, Phi(x) = (1 + erf(x / sqrt(2))) / 2. Questo sposta il problema ma non lo risolve numericamente:
+anche erf non è elementare, quindi i suoi valori vanno comunque calcolati con serie, frazioni continue o approssimazioni razionali, ed è quello che fanno le librerie
+(JavaScript non ha nemmeno una erf predefinita). I metodi 2, 3 e 4 sono proprio calcoli di questo tipo, e il metodo 1 torna all'integrale stesso.</p>`,
+    errSize: 'N e K devono essere tra 1 e 1e6, S tra 10 e 2e6',
+    head: (name, I) => `${name},  integrale esatto = ${I}`,
+    dirNote: "l'integrale di Riemann non esiste: 0 è l'integrale di Lebesgue",
+    sqrtNote: "f è illimitata, quindi 2 è un integrale di Riemann improprio",
+    value: 'valore',
+    error: 'errore',
+    evals: 'valut. f',
+    ms: 'ms',
+    rMid: N => `Riemann, punti medi, N = ${N}`,
+    rRand: N => `Riemann, punti casuali, N = ${N}`,
+    leb: (K, S) => `Lebesgue, K = ${K}, S = ${S}`,
+    convTitle: 'errore assoluto in funzione del numero di parti (1e-16 = esatto)',
+    convR: 'Riemann, N sottointervalli',
+    convL: S => `Lebesgue, K livelli, S = ${S}`,
+    exact: 'esatto',
+    colMid: 'R. punti medi',
+    colRand: 'R. casuali',
+    colLeb: 'Lebesgue',
+    errX: 'x deve essere un numero e n tra 2 e 1e6',
+    diff: 'meno m. 4',
+    terms: 'termini',
+    m1: '1. Simpson',
+    m2: '2. serie di potenze erf',
+    m3: '3. approssimazione erf (A&S)',
+    m4: '4. metodo proposto',
+    refCol: 'riferimento',
+    m4s: 'metodo 4',
+    m2s: 'serie',
+    usPer: 'us / valut.',
+    maxErr: 'errore max',
+    simpTitle: 'regola di Simpson, errore assoluto a x = 3 in funzione di n',
+    simpName: 'misurato'
   }
 }
 }

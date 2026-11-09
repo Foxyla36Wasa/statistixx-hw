@@ -4,4 +4,5 @@ HW1: https://foxyla36wasa.github.io/statistixx-hw/hw1/
 HW2: https://foxyla36wasa.github.io/statistixx-hw/hw2/  
 HW2-B: https://foxyla36wasa.github.io/statistixx-hw/hw2-b/  
 HW3: https://foxyla36wasa.github.io/statistixx-hw/hw3/  
-HW4: https://foxyla36wasa.github.io/statistixx-hw/hw4/
+HW4: https://foxyla36wasa.github.io/statistixx-hw/hw4/  
+HW5: https://foxyla36wasa.github.io/statistixx-hw/hw5/
