@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>HW6</title>
+<style>
+body{font:14px monospace;max-width:960px;margin:1em auto;padding:0 1em}
+input{width:4em}
+textarea{width:100%;font:inherit}
+pre{white-space:pre-wrap}
+canvas{border:1px solid #aaa;max-width:100%;height:auto;margin:2px}
+</style>
+<script src="../localisation.js"></script>
+
+<p><a href="../hw1/">HW1</a> | <a href="../hw2/">HW2</a> | <a href="../hw2-b/">HW2-B</a> | <a href="../hw3/">HW3</a> | <a href="../hw4/">HW4</a> | <a href="../hw5/">HW5</a> | <a href="../hw6/">HW6</a> |
+<select id=lang><option value=en>ENG</option><option value=it>ITA</option></select>
+<button id=dl data-t=dl></button></p>
+
+<h3 data-t=h1></h3>
+<p><span data-t=intro></span>
+<br>n <input id=n value=500> seed <input id=seed value=1> <button id=gen data-t=gen></button></p>
+<p><span data-t=dataL></span><br><textarea id=data rows=6></textarea><br>
+<button id=run data-t=run></button></p>
+<pre id=out></pre>
+
+<h3 data-t=hTab></h3>
+<p data-t=tabNote></p>
+<pre id=tab></pre>
+
+<h3 data-t=hCond></h3>
+<p data-t=condNote></p>
+<pre id=cond></pre>
+<canvas id=bars width=620 height=200></canvas>
+
+<h3 data-t=hExp></h3>
+<p data-t=expNote></p>
+<pre id=exp></pre>
+
+<h3 data-t=notesH></h3>
+<div data-t=notes></div>
+
+<script>
+const $ = id => document.getElementById(id)
+
+let lang = 'en'
+try { lang = localStorage.getItem('lang') || 'en' } catch (e) {}
+const tr = () => LOC[lang].hw6
+
+function texts() {
+  document.documentElement.lang = lang
+  document.title = tr().title
+  $('lang').value = lang
+  document.querySelectorAll('[data-t]').forEach(e => e.innerHTML = tr()[e.dataset.t])
+}
+
+// outputs and charts are kept as functions of the text, so they can be redrawn in the other language
+const out = {}, charts = {}
+const show = id => $(id).textContent = (out[id] || []).map(f => typeof f == 'function' ? f(tr()) : f).join('\n')
+const put = (id, lines) => { out[id] = lines; show(id) }
+const keep = (id, f) => { charts[id] = f; f(tr()) }
+
+function rng(a) {
+  return () => {
+    a = a + 0x6D2B79F5 | 0
+    let t = Math.imul(a ^ a >>> 15, 1 | a)
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t
+    return ((t ^ t >>> 14) >>> 0) / 4294967296
+  }
+}
+
+// simulated dataset: X = attack type, F = outcome, with an outcome distribution that depends on the attack
+const XS = ['phishing', 'malware', 'brute force', 'SQL injection'], FS = ['blocked', 'detected', 'compromised']
+const PX = [.4, .25, .2, .15], PFX = [[.3, .3, .4], [.5, .35, .15], [.8, .15, .05], [.45, .25, .3]]
+const pick = (r, p) => { let u = r(), i = 0; while (i < p.length - 1 && (u -= p[i]) >= 0) i++; return i }
+
+function generate() {
+  const n = Math.round(+$('n').value)
+  if (!(n >= 10 && n <= 100000)) return put('out', [t => t.errN])
+  const r = rng(Math.round(+$('seed').value) || 1), lines = []
+  for (let k = 0; k < n; k++) { const i = pick(r, PX); lines.push(XS[i] + ', ' + FS[pick(r, PFX[i])]) }
+  $('data').value = lines.join('\n')
+  run()
+}
+
+// p-value of the chi-square test: P(chi2_df > x) = Q(df/2, x/2), regularized upper incomplete gamma
+function lgamma(z) {
+  const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, .1208650973866179e-2, -.5395239384953e-5]
+  let y = z, t = z + 5.5, s = 1.000000000190015
+  t -= (z + .5) * Math.log(t)
+  for (const v of c) s += v / ++y
+  return -t + Math.log(2.5066282746310005 * s / z)
+}
+function gammaQ(a, x) {
+  if (x <= 0) return 1
+  const pre = Math.exp(-x + a * Math.log(x) - lgamma(a))
+  if (x < a + 1) {
+    let ap = a, d = 1 / a, s = d
+    for (let i = 0; i < 1000 && Math.abs(d) > Math.abs(s) * 1e-16; i++) { d *= x / ++ap; s += d }
+    return 1 - s * pre
+  }
+  let b = x + 1 - a, c = 1e300, d = 1 / b, h = d
+  for (let i = 1; i < 1000; i++) {
+    const an = -i * (i - a)
+    b += 2; d = an * d + b; c = b + an / c
+    if (Math.abs(d) < 1e-300) d = 1e-300
+    if (Math.abs(c) < 1e-300) c = 1e-300
+    d = 1 / d; h *= d * c
+    if (Math.abs(d * c - 1) < 1e-16) break
+  }
+  return pre * h
+}
+const pChi = (x, df) => gammaQ(df / 2, x / 2)
+
+const sum = v => v.reduce((s, x) => s + x, 0)
+const pv = p => p < 1e-4 ? p.toExponential(2) : p.toFixed(4)
+
+// a table with row labels, column labels and cells already formatted as strings
+function grid(rl, cl, cells, corner = '') {
+  const w0 = Math.max(corner.length, ...rl.map(s => s.length)) + 2
+  const w = Math.max(9, ...cl.map(s => s.length + 2), ...cells.flat().map(s => s.length + 2))
+  return [corner.padEnd(w0) + cl.map(s => s.padStart(w)).join(''), ...rl.map((s, i) => s.padEnd(w0) + cells[i].map(v => v.padStart(w)).join(''))]
+}
+
+function run() {
+  // build the contingency table from the records
+  const recs = []
+  let bad = 0
+  for (const line of $('data').value.split('\n')) {
+    if (!line.trim()) continue
+    const p = line.split(/[,;\t]/).map(s => s.trim())
+    if (p.length != 2 || !p[0] || !p[1]) { bad++; continue }
+    recs.push(p)
+  }
+  // categories in the order of the simulated dataset, any other in order of appearance
+  const cats = (k, known) => { const u = [...new Set(recs.map(p => p[k]))], o = s => known.includes(s) ? known.indexOf(s) : known.length + u.indexOf(s); return u.sort((a, b) => o(a) - o(b)) }
+  const xs = cats(0, XS), fs = cats(1, FS), pairs = recs.map(p => [xs.indexOf(p[0]), fs.indexOf(p[1])])
+  const r = xs.length, c = fs.length, n = pairs.length
+  if (r < 2 || c < 2) return put('out', [t => t.errData])
+  const O = xs.map(() => fs.map(() => 0))
+  for (const [i, j] of pairs) O[i][j]++
+  const rt = O.map(sum), ct = fs.map((_, j) => sum(O.map(row => row[j])))
+  const E = O.map((row, i) => row.map((_, j) => rt[i] * ct[j] / n))
+  const C = O.map((row, i) => row.map((o, j) => (o - E[i][j]) ** 2 / E[i][j]))
+  const chi = sum(C.flat()), df = (r - 1) * (c - 1), p = pChi(chi, df), minE = Math.min(...E.flat())
+
+  const f3 = v => v.toFixed(3)
+  put('tab', [t => grid([...xs, t.total, t.marg], [...fs, t.total, t.marg],
+    [...O.map((row, i) => [...row.map(String), String(rt[i]), f3(rt[i] / n)]), [...ct.map(String), String(n), ''], [...ct.map(v => f3(v / n)), '', f3(1)]], 'X \\ F').join('\n')])
+  put('cond', [
+    t => t.condF,
+    t => grid([...xs, t.marg], fs, [...O.map((row, i) => row.map(v => f3(v / rt[i]))), ct.map(v => f3(v / n))], 'X \\ F').join('\n'),
+    '',
+    t => t.condX,
+    t => grid([...fs, t.marg], xs, [...fs.map((_, j) => xs.map((_, i) => f3(O[i][j] / ct[j]))), rt.map(v => f3(v / n))], 'F \\ X').join('\n')
+  ])
+  put('exp', [
+    t => t.expT,
+    t => grid(xs, fs, E.map(row => row.map(v => v.toFixed(2))), 'X \\ F').join('\n'),
+    '',
+    t => t.contT,
+    t => grid(xs, fs, C.map(row => row.map(v => v.toFixed(3))), 'X \\ F').join('\n')
+  ])
+  put('out', [
+    t => t.head(n, r, c, bad),
+    '',
+    t => t.chi(chi.toFixed(3), df),
+    t => t.pval(pv(p)),
+    t => t.minE(minE.toFixed(2)) + (minE < 5 ? '  ' + t.warnE : ''),
+    t => p < .05 ? t.dep : t.indep
+  ])
+
+  // conditional distribution of F for each X, and the marginal of F
+  const prof = [...O.map((row, i) => row.map(v => v / rt[i])), ct.map(v => v / n)]
+  const col = ['#000', 'red', 'blue', '#888', 'orange', 'green', 'purple', 'brown']
+  keep('bars', t => {
+    const cv = $('bars'), g = cv.getContext('2d'), labels = [...xs, t.marg], x0 = 130, bh = Math.min(26, (cv.height - 50) / labels.length)
+    g.clearRect(0, 0, cv.width, cv.height); g.font = '11px monospace'
+    g.fillStyle = '#000'; g.fillText(t.barsTitle, 3, 12)
+    prof.forEach((row, i) => {
+      let x = x0
+      const y = 22 + i * (bh + 4)
+      row.forEach((v, j) => { g.fillStyle = col[j % col.length]; g.fillRect(x, y, v * (cv.width - x0 - 10), bh); x += v * (cv.width - x0 - 10) })
+      g.fillStyle = '#000'; g.fillText(labels[i].slice(0, 18), 3, y + bh / 2 + 4)
+    })
+    fs.forEach((s, j) => { g.fillStyle = col[j % col.length]; g.fillText(s, x0 + j * 120, cv.height - 6) })
+  })
+}
+
+$('lang').onchange = () => {
+  lang = $('lang').value
+  try { localStorage.setItem('lang', lang) } catch (e) {}
+  texts()
+  Object.keys(out).forEach(show)
+  Object.values(charts).forEach(f => f(tr()))
+}
+// the downloaded page loads localisation.js from its own folder
+$('dl').onclick = async () => {
+  const save = (blob, name) => { const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = name; l.click() }
+  const page = (await (await fetch(location.href)).text()).replace('../localisation.js', 'localisation.js')
+  save(new Blob([page], {type: 'text/html'}), 'hw6.html')
+  save(await (await fetch('../localisation.js')).blob(), 'localisation.js')
+}
+
+for (const id of ['n', 'seed']) $(id).onchange = generate
+$('gen').onclick = generate
+$('run').onclick = run
+texts()
+generate()
+</script>

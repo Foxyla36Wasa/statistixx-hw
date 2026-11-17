@@ -545,6 +545,65 @@ erf is not elementary either, so its values still have to be computed with serie
     maxErr: 'max error',
     simpTitle: "Simpson's rule, absolute error at x = 3 against n",
     simpName: 'measured'
+  },
+  hw6: {
+    title: 'HW6 - statistical independence',
+    dl: 'download',
+    h1: 'HW6 - statistical independence: contingency table and chi-square test',
+    intro: 'The dataset is a list of records (x, f), one per line. By default it is a simulated sample of n attacks: X is the attack type and F its outcome, with outcome probabilities that depend on the attack type. Any other dataset can be pasted in the box below.',
+    gen: 'generate',
+    dataL: 'records (x, f), one per line, separated by a comma, semicolon or tab',
+    run: 'compute',
+    hTab: '1. contingency table and marginal frequencies',
+    tabNote: 'observed counts n_ij, row and column totals n_i. and n_.j, and marginal relative frequencies n_i./n and n_.j/n',
+    hCond: '2. conditional frequencies',
+    condNote: 'top: distribution of F for each value of X, n_ij / n_i.; below: distribution of X for each value of F, n_ij / n_.j; chart: the first table, one bar for each value of X and one for the marginal of F',
+    hExp: '3. expected frequencies under independence and chi-square',
+    expNote: 'expected counts E_ij = n_i. n_.j / n, and the contribution (n_ij - E_ij)^2 / E_ij of each cell to the chi-square statistic',
+    notesH: 'notes',
+    notes: `<p>Contingency table and frequencies. The page reads the records, collects the values of X and F, and counts how many records fall in each pair (x_i, f_j):
+these counts n_ij form the contingency table of section 1. The row and column totals divided by n are the marginal frequencies of X and F,
+and dividing each count by its row or column total gives the conditional frequencies of section 2.
+With the default data, 29.6% of all attacks end in a compromise, but the conditional frequency is 46.5% for phishing and 9.5% for brute force.</p>
+<p>Expected frequencies and chi-square. If X and F were independent, the expected count of each cell would be E_ij = n_i. n_.j / n (section 3).
+The statistic chi^2 = sum over all cells of (n_ij - E_ij)^2 / E_ij measures how far the observed table is from these counts.
+With the default data chi^2 = 79.574 with (4-1)(3-1) = 6 degrees of freedom, and the p-value is 4.37e-15.
+The largest contributions come from phishing (21.0 for compromised and 15.8 for blocked) and brute force (14.9 for blocked and 13.0 for compromised).
+The smallest expected count is 15.72, above 5, so the chi-square approximation is reliable.</p>
+<p>Independence in probability. Two events A and B are independent when P(A and B) = P(A) P(B), which is the same as P(A | B) = P(A): knowing that B happened
+does not change the probability of A. Two random variables X and F are independent when P(X = x, F = f) = P(X = x) P(F = f) for every pair of values,
+so the conditional distribution of F is the same for every value of X and equal to the marginal distribution of F.</p>
+<p>Independence in statistics. On observed data the same idea is written with relative frequencies: X and F are statistically independent in the sample
+when n_ij / n = (n_i. / n)(n_.j / n) for every cell, that is when n_ij = E_ij and all the rows of the conditional table f(F | X) are equal to the marginal of F.
+In a real sample this never holds exactly, even when the variables are independent in probability, because of random fluctuations.
+The chi-square test decides whether the differences are too large to be fluctuations: under the hypothesis of independence chi^2 follows approximately
+a chi-square distribution with (r-1)(c-1) degrees of freedom, whose mean is 6 here and which exceeds 12.59 only 5% of the time.</p>
+<p>Interpretation. The observed chi^2 = 79.574 is far above 12.59, and the p-value 4.37e-15 means that a table this far from independence would almost never appear
+if X and F were independent. Independence is rejected: the outcome of an attack depends on its type. The conditional table shows how: phishing is compromised
+much more often than the average (46.5% against 29.6%), while brute force is blocked 70.5% of the time against an average of 44.2%.
+This agrees with how the data were simulated, with outcome probabilities that change with the attack type.
+A large p-value would not prove independence, it would only mean that the data do not show a dependence.</p>
+<p>Association and causality. The test shows an association between attack type and outcome, not its cause, and it does not even give a direction.
+Phishing could succeed more often because it targets people instead of systems, but the same table would also appear if the organisations that receive
+more phishing had weaker defences (a third variable that influences both), or if only some outcomes were recorded (for example only the attacks that were detected).
+To claim that the attack type causes the outcome one needs a controlled experiment, where the type is assigned at random, or a causal model that accounts
+for the other variables. Statistical dependence is necessary for a causal effect, but not sufficient.</p>`,
+    errN: 'n must be between 10 and 100000',
+    errData: 'the data must contain at least two values of X and two values of F',
+    head: (n, r, c, bad) => `${n} records, ${r} values of X, ${c} values of F` + (bad ? `, lines skipped: ${bad}` : ''),
+    chi: (x, df) => `chi-square = ${x},  degrees of freedom (r-1)(c-1) = ${df}`,
+    pval: p => `p-value = P(chi2 > observed) = ${p}`,
+    minE: v => `smallest expected count = ${v}`,
+    warnE: '(below 5: the chi-square approximation is not reliable)',
+    dep: 'p < 0.05: independence is rejected, X and F are dependent',
+    indep: 'p >= 0.05: the data are compatible with independence',
+    total: 'total',
+    marg: 'marginal',
+    condF: 'f(F | X) = n_ij / n_i.',
+    condX: 'f(X | F) = n_ij / n_.j',
+    expT: 'expected counts E_ij',
+    contT: 'contributions (n_ij - E_ij)^2 / E_ij',
+    barsTitle: 'f(F | X) for each value of X, and the marginal of F'
   }
 },
 it: {
@@ -1092,6 +1151,65 @@ anche erf non è elementare, quindi i suoi valori vanno comunque calcolati con s
     maxErr: 'errore max',
     simpTitle: 'regola di Simpson, errore assoluto a x = 3 in funzione di n',
     simpName: 'misurato'
+  },
+  hw6: {
+    title: 'HW6 - indipendenza statistica',
+    dl: 'scarica',
+    h1: 'HW6 - indipendenza statistica: tabella di contingenza e test del chi-quadro',
+    intro: 'Il dataset è una lista di record (x, f), uno per riga. Di default è un campione simulato di n attacchi: X è il tipo di attacco e F il suo esito, con probabilità degli esiti che dipendono dal tipo di attacco. Nel riquadro qui sotto si può incollare qualsiasi altro dataset.',
+    gen: 'genera',
+    dataL: 'record (x, f), uno per riga, separati da virgola, punto e virgola o tab',
+    run: 'calcola',
+    hTab: '1. tabella di contingenza e frequenze marginali',
+    tabNote: 'frequenze assolute osservate n_ij, totali di riga e di colonna n_i. e n_.j, e frequenze relative marginali n_i./n e n_.j/n',
+    hCond: '2. frequenze condizionate',
+    condNote: 'sopra: distribuzione di F per ogni valore di X, n_ij / n_i.; sotto: distribuzione di X per ogni valore di F, n_ij / n_.j; grafico: la prima tabella, una barra per ogni valore di X e una per la marginale di F',
+    hExp: '3. frequenze attese in caso di indipendenza e chi-quadro',
+    expNote: 'frequenze attese E_ij = n_i. n_.j / n, e il contributo (n_ij - E_ij)^2 / E_ij di ogni cella alla statistica chi-quadro',
+    notesH: 'note',
+    notes: `<p>Tabella di contingenza e frequenze. La pagina legge i record, raccoglie i valori di X e di F e conta quanti record cadono in ogni coppia (x_i, f_j):
+questi conteggi n_ij formano la tabella di contingenza della sezione 1. I totali di riga e di colonna divisi per n sono le frequenze marginali di X e di F,
+e dividendo ogni conteggio per il suo totale di riga o di colonna si ottengono le frequenze condizionate della sezione 2.
+Con i dati di default il 29.6% di tutti gli attacchi finisce con una compromissione, ma la frequenza condizionata è del 46.5% per il phishing e del 9.5% per il brute force.</p>
+<p>Frequenze attese e chi-quadro. Se X e F fossero indipendenti, la frequenza attesa di ogni cella sarebbe E_ij = n_i. n_.j / n (sezione 3).
+La statistica chi^2 = somma su tutte le celle di (n_ij - E_ij)^2 / E_ij misura quanto la tabella osservata si allontana da questi valori.
+Con i dati di default chi^2 = 79.574 con (4-1)(3-1) = 6 gradi di libertà, e il p-value è 4.37e-15.
+I contributi maggiori vengono dal phishing (21.0 per compromised e 15.8 per blocked) e dal brute force (14.9 per blocked e 13.0 per compromised).
+La frequenza attesa più piccola è 15.72, sopra 5, quindi l'approssimazione del chi-quadro è affidabile.</p>
+<p>Indipendenza in probabilità. Due eventi A e B sono indipendenti quando P(A e B) = P(A) P(B), che equivale a P(A | B) = P(A): sapere che B è avvenuto
+non cambia la probabilità di A. Due variabili aleatorie X e F sono indipendenti quando P(X = x, F = f) = P(X = x) P(F = f) per ogni coppia di valori,
+quindi la distribuzione condizionata di F è la stessa per ogni valore di X ed è uguale alla distribuzione marginale di F.</p>
+<p>Indipendenza in statistica. Sui dati osservati la stessa idea si scrive con le frequenze relative: X e F sono statisticamente indipendenti nel campione
+quando n_ij / n = (n_i. / n)(n_.j / n) per ogni cella, cioè quando n_ij = E_ij e tutte le righe della tabella condizionata f(F | X) sono uguali alla marginale di F.
+In un campione reale questo non succede mai esattamente, anche quando le variabili sono indipendenti in probabilità, a causa delle fluttuazioni casuali.
+Il test del chi-quadro decide se le differenze sono troppo grandi per essere fluttuazioni: nell'ipotesi di indipendenza chi^2 segue approssimativamente
+una distribuzione chi-quadro con (r-1)(c-1) gradi di libertà, che qui ha media 6 e supera 12.59 solo nel 5% dei casi.</p>
+<p>Interpretazione. Il valore osservato chi^2 = 79.574 è molto sopra 12.59, e il p-value 4.37e-15 significa che una tabella così lontana dall'indipendenza
+non comparirebbe quasi mai se X e F fossero indipendenti. L'indipendenza viene rifiutata: l'esito di un attacco dipende dal suo tipo. La tabella condizionata mostra come:
+il phishing porta a una compromissione molto più spesso della media (46.5% contro 29.6%), mentre il brute force viene bloccato nel 70.5% dei casi contro una media del 44.2%.
+Questo è coerente con il modo in cui i dati sono stati simulati, con probabilità degli esiti che cambiano con il tipo di attacco.
+Un p-value grande non dimostrerebbe l'indipendenza, significherebbe solo che i dati non mostrano una dipendenza.</p>
+<p>Associazione e causalità. Il test mostra un'associazione tra tipo di attacco ed esito, non la sua causa, e non indica nemmeno una direzione.
+Il phishing potrebbe riuscire più spesso perché colpisce le persone invece dei sistemi, ma la stessa tabella comparirebbe anche se le organizzazioni che ricevono
+più phishing avessero difese più deboli (una terza variabile che influenza entrambe), oppure se venissero registrati solo alcuni esiti (per esempio solo gli attacchi rilevati).
+Per affermare che il tipo di attacco causa l'esito serve un esperimento controllato, in cui il tipo viene assegnato a caso, oppure un modello causale che tenga conto
+delle altre variabili. La dipendenza statistica è necessaria per un effetto causale, ma non sufficiente.</p>`,
+    errN: 'n deve essere tra 10 e 100000',
+    errData: 'i dati devono contenere almeno due valori di X e due valori di F',
+    head: (n, r, c, bad) => `${n} record, ${r} valori di X, ${c} valori di F` + (bad ? `, righe scartate: ${bad}` : ''),
+    chi: (x, df) => `chi-quadro = ${x},  gradi di libertà (r-1)(c-1) = ${df}`,
+    pval: p => `p-value = P(chi2 > osservato) = ${p}`,
+    minE: v => `frequenza attesa più piccola = ${v}`,
+    warnE: "(sotto 5: l'approssimazione del chi-quadro non è affidabile)",
+    dep: "p < 0.05: l'indipendenza viene rifiutata, X e F sono dipendenti",
+    indep: "p >= 0.05: i dati sono compatibili con l'indipendenza",
+    total: 'totale',
+    marg: 'marginale',
+    condF: 'f(F | X) = n_ij / n_i.',
+    condX: 'f(X | F) = n_ij / n_.j',
+    expT: 'frequenze attese E_ij',
+    contT: 'contributi (n_ij - E_ij)^2 / E_ij',
+    barsTitle: 'f(F | X) per ogni valore di X, e la marginale di F'
   }
 }
 }
