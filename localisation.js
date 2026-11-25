@@ -649,7 +649,7 @@ while with p_n = 1/n^2 it is already 0.097 after n = 10 and 0.007 after n = 100.
 <p>Ex. 1, role in the LLN, the CLT and other results. For i.i.d. X_i with mean mu, the weak law of large numbers states that the sample mean S_n/n converges to mu in probability;
 when the variance sigma^2 is finite it follows from E[(S_n/n - mu)^2] = sigma^2/n, so the convergence is also in mean square.
 The strong law (Kolmogorov) states almost sure convergence and only needs E|X| finite: almost every single sequence of averages settles at mu,
-which justifies estimating mu from one long sample, as in HW3 and HW4.
+which justifies estimating mu from one long sample.
 The central limit theorem is a statement in distribution: (S_n - n mu) / (sigma sqrt(n)) converges in distribution to N(0, 1), and it does not converge in probability,
 because the standardised sum keeps fluctuating with variance 1 instead of settling to a value.
 Other results use the same modes: consistency of an estimator is convergence in probability to the true parameter, the Glivenko-Cantelli theorem gives almost sure
@@ -659,12 +659,12 @@ which is what confidence intervals and tests use.</p>
 If the X_i are independent, or just uncorrelated, the covariances are 0 and the variances add: Var(S_n) = n sigma^2, so the standard deviation of the sum grows like sqrt(n), not like n.
 Dividing by n gives Var(S_n/n) = sigma^2/n, which goes to 0 (law of large numbers); dividing by sqrt(n) gives a variance that stays sigma^2,
 which is the only scale where a non-degenerate limit can exist (central limit theorem).
-In statistical inference the same fact gives the standard error sigma/sqrt(n) of the mean: confidence intervals shrink like 1/sqrt(n), so four times more data halve their width,
-as measured in HW3 and HW4. Independence is what makes this work: with positively correlated data the covariances add up and the variance of the mean decreases more slowly
+In statistical inference the same fact gives the standard error sigma/sqrt(n) of the mean: confidence intervals shrink like 1/sqrt(n), so four times more data halve their width.
+Independence is what makes this work: with positively correlated data the covariances add up and the variance of the mean decreases more slowly
 (with n identical copies it does not decrease at all), so formulas that assume sqrt(n) would be too optimistic.</p>
 <p>Ex. 2, conditional probability. In probability theory P(A | B) = P(A and B) / P(B) is the probability of A in the restricted world where B happened;
 it gives the multiplication rule P(A and B) = P(A | B) P(B), the law of total probability P(A) = sum of P(A | B_i) P(B_i), and the definition of independence, P(A | B) = P(A).
-In statistics conditioning is how data enter: relative frequencies within a group (the conditional tables of HW6) estimate conditional probabilities,
+In statistics conditioning is how data enter: relative frequencies within a group estimate conditional probabilities,
 and every model gives the probability of the data given the parameters, P(x | theta). Frequentist inference keeps theta fixed and studies the data given theta;
 Bayesian inference also conditions in the other direction, on the observed data, and gives P(theta | x).</p>
 <p>Ex. 2, prior, likelihood and posterior. The prior P(theta) is the distribution of the unknown quantity before seeing the data.
@@ -1358,7 +1358,7 @@ mentre con p_n = 1/n^2 è già 0.097 dopo n = 10 e 0.007 dopo n = 100.</p>
 <p>Ex. 1, ruolo nella LGN, nel TLC e in altri risultati. Per X_i i.i.d. con media mu, la legge debole dei grandi numeri afferma che la media campionaria S_n/n converge a mu in probabilità;
 quando la varianza sigma^2 è finita segue da E[(S_n/n - mu)^2] = sigma^2/n, quindi la convergenza è anche in media quadratica.
 La legge forte (Kolmogorov) afferma la convergenza quasi certa e richiede solo E|X| finito: quasi ogni singola successione di medie si stabilizza su mu,
-ed è questo che giustifica la stima di mu da un solo campione lungo, come negli HW3 e HW4.
+ed è questo che giustifica la stima di mu da un solo campione lungo.
 Il teorema del limite centrale è un enunciato in distribuzione: (S_n - n mu) / (sigma sqrt(n)) converge in distribuzione a N(0, 1), e non converge in probabilità,
 perché la somma standardizzata continua a fluttuare con varianza 1 invece di stabilizzarsi su un valore.
 Altri risultati usano gli stessi modi: la consistenza di uno stimatore è la convergenza in probabilità al vero parametro, il teorema di Glivenko-Cantelli dà la convergenza quasi certa
@@ -1368,12 +1368,12 @@ ed è questo che usano gli intervalli di confidenza e i test.</p>
 Se le X_i sono indipendenti, o anche solo incorrelate, le covarianze sono 0 e le varianze si sommano: Var(S_n) = n sigma^2, quindi la deviazione standard della somma cresce come sqrt(n), non come n.
 Dividendo per n si ottiene Var(S_n/n) = sigma^2/n, che tende a 0 (legge dei grandi numeri); dividendo per sqrt(n) si ottiene una varianza che resta sigma^2,
 l'unica scala in cui può esistere un limite non degenere (teorema del limite centrale).
-Nell'inferenza statistica lo stesso fatto dà l'errore standard sigma/sqrt(n) della media: gli intervalli di confidenza si restringono come 1/sqrt(n), quindi con il quadruplo dei dati la loro ampiezza si dimezza,
-come misurato negli HW3 e HW4. È l'indipendenza che fa funzionare tutto questo: con dati correlati positivamente le covarianze si sommano e la varianza della media cala più lentamente
+Nell'inferenza statistica lo stesso fatto dà l'errore standard sigma/sqrt(n) della media: gli intervalli di confidenza si restringono come 1/sqrt(n), quindi con il quadruplo dei dati la loro ampiezza si dimezza.
+È l'indipendenza che fa funzionare tutto questo: con dati correlati positivamente le covarianze si sommano e la varianza della media cala più lentamente
 (con n copie identiche non cala affatto), quindi le formule che assumono sqrt(n) sarebbero troppo ottimiste.</p>
 <p>Ex. 2, probabilità condizionata. Nella teoria della probabilità P(A | B) = P(A e B) / P(B) è la probabilità di A nel mondo ristretto in cui B è avvenuto;
 da essa seguono la regola del prodotto P(A e B) = P(A | B) P(B), la legge della probabilità totale P(A) = somma di P(A | B_i) P(B_i) e la definizione di indipendenza, P(A | B) = P(A).
-In statistica il condizionamento è il modo in cui entrano i dati: le frequenze relative all'interno di un gruppo (le tabelle condizionate dell'HW6) stimano probabilità condizionate,
+In statistica il condizionamento è il modo in cui entrano i dati: le frequenze relative all'interno di un gruppo stimano probabilità condizionate,
 e ogni modello dà la probabilità dei dati dati i parametri, P(x | theta). L'inferenza frequentista tiene theta fisso e studia i dati dato theta;
 l'inferenza bayesiana condiziona anche nell'altra direzione, sui dati osservati, e dà P(theta | x).</p>
 <p>Ex. 2, prior, verosimiglianza e posterior. La prior P(theta) è la distribuzione della quantità ignota prima di vedere i dati.
