@@ -604,6 +604,109 @@ for the other variables. Statistical dependence is necessary for a causal effect
     expT: 'expected counts E_ij',
     contT: 'contributions (n_ij - E_ij)^2 / E_ij',
     barsTitle: 'f(F | X) for each value of X, and the marginal of F'
+  },
+  hw7: {
+    title: 'HW7 - convergence and Bayes',
+    dl: 'download',
+    h1: "HW7 - modes of convergence, conditional probability and Bayes' theorem",
+    hEx1: 'Ex. 1 - modes of convergence in probability theory',
+    defs: `<p>Let X_1, X_2, ... and X be random variables defined on the same probability space. The four main modes of convergence of X_n to X are:</p>
+<pre>almost surely (a.s.)   P(lim X_n = X) = 1
+in probability         for every e > 0:  P(|X_n - X| > e) -> 0
+in mean square (L^2)   E[(X_n - X)^2] -> 0
+in distribution        F_n(x) -> F(x) at every point x where F is continuous
+
+relations              a.s.  => in probability => in distribution
+                       L^2   => in probability  (Chebyshev: P(|X_n - X| > e) <= E[(X_n - X)^2] / e^2)
+                       in distribution to a constant c => in probability to c</pre>`,
+    hBc: '1. in probability but not almost surely',
+    bcNote: 'X_1, X_2, ... are independent, X_n = 1 with probability p_n and 0 otherwise. Since P(X_n = 1) = p_n -> 0 (blue line), X_n -> 0 in probability, and also in mean square because E[X_n^2] = p_n. Almost sure convergence needs that, in almost every sequence, all the values are 0 after some index. By the Borel-Cantelli lemmas this happens with probability 1 if the sum of the p_n is finite (p_n = 1/n^2, red) and with probability 0 if it is infinite (p_n = 1/n, black). The table and the chart give, for each n, the fraction of the m simulated sequences that still have a 1 between n and N (dots) and its exact value (lines).',
+    run: 'run',
+    hEx2: "Ex. 2 - conditional probability, Bayes' theorem and statistical inference",
+    bayes: `<p>Conditional probability: P(A | B) = P(A and B) / P(B), for P(B) > 0. Writing P(A and B) in the two possible ways gives Bayes' theorem,
+here for an unknown quantity theta and observed data x:</p>
+<pre>P(theta | x) = P(x | theta) P(theta) / P(x),     P(x) = sum (or integral) over theta of P(x | theta) P(theta)
+posterior    = likelihood * prior / evidence</pre>`,
+    hAlarm: '1. a discrete example: an intrusion alarm',
+    alarmNote: "A = an attack is in progress. The prior P(A) is the base rate of attacks; the likelihood is given by the detection rate P(alarm | A) and the false alarm rate P(alarm | not A). The table applies Bayes' theorem after each alarm, using the posterior of one step as the prior of the next (alarms independent given A or not A).",
+    priorL: 'prior P(A)',
+    sensL: 'P(alarm | A)',
+    fprL: 'P(alarm | not A)',
+    kL: 'alarms',
+    hBeta: '2. a continuous example: Beta prior and binomial likelihood',
+    betaNote: 'theta = probability that an attack on a system succeeds. Prior Beta(a, b), with mean a/(a+b); data: k successes in n attacks, with binomial likelihood proportional to theta^k (1-theta)^(n-k); the posterior is again a Beta, Beta(a + k, b + n - k). The interval is the central 95% credible interval. Chart: black posterior, red likelihood (normalised to area 1), blue prior.',
+    dataL: 'data:',
+    notesH: 'notes',
+    notes: `<p>Ex. 1, differences between the modes. Almost sure convergence is about single sequences: with probability 1 the sequence of numbers X_n(omega) converges to X(omega).
+Convergence in probability only asks that, for each fixed large n, a deviation |X_n - X| > e is unlikely; rare large deviations can keep appearing at different n, so it is weaker.
+Mean-square convergence asks that the average squared distance E[(X_n - X)^2] goes to 0; by Chebyshev's inequality it implies convergence in probability,
+but it needs finite second moments and it is not implied by almost sure convergence (X_n = n with probability 1/n^2 and 0 otherwise goes to 0 almost surely, but E[X_n^2] = 1).
+Convergence in distribution only concerns the distribution functions, not the values: if Z is N(0,1), the sequence X_n = -Z converges in distribution to Z,
+although |X_n - Z| = 2|Z| never becomes small. So almost sure and mean-square convergence each imply convergence in probability, which implies convergence in distribution,
+and the converses are false in general. Section 1 shows a sequence that converges in probability and in mean square but not almost surely:
+with p_n = 1/n the fraction of sequences that still have a 1 after n = 1000 is 0.898 (exact value 0.900 with N = 10000, and it tends to 1 as N grows),
+while with p_n = 1/n^2 it is already 0.097 after n = 10 and 0.007 after n = 100.</p>
+<p>Ex. 1, role in the LLN, the CLT and other results. For i.i.d. X_i with mean mu, the weak law of large numbers states that the sample mean S_n/n converges to mu in probability;
+when the variance sigma^2 is finite it follows from E[(S_n/n - mu)^2] = sigma^2/n, so the convergence is also in mean square.
+The strong law (Kolmogorov) states almost sure convergence and only needs E|X| finite: almost every single sequence of averages settles at mu,
+which justifies estimating mu from one long sample, as in HW3 and HW4.
+The central limit theorem is a statement in distribution: (S_n - n mu) / (sigma sqrt(n)) converges in distribution to N(0, 1), and it does not converge in probability,
+because the standardised sum keeps fluctuating with variance 1 instead of settling to a value.
+Other results use the same modes: consistency of an estimator is convergence in probability to the true parameter, the Glivenko-Cantelli theorem gives almost sure
+uniform convergence of the empirical distribution function, and asymptotic normality of estimators, Slutsky's theorem and the delta method are statements in distribution,
+which is what confidence intervals and tests use.</p>
+<p>Ex. 1, why sqrt(n). For a sum S_n = X_1 + ... + X_n, Var(S_n) is the sum of the variances plus twice the sum of the covariances.
+If the X_i are independent, or just uncorrelated, the covariances are 0 and the variances add: Var(S_n) = n sigma^2, so the standard deviation of the sum grows like sqrt(n), not like n.
+Dividing by n gives Var(S_n/n) = sigma^2/n, which goes to 0 (law of large numbers); dividing by sqrt(n) gives a variance that stays sigma^2,
+which is the only scale where a non-degenerate limit can exist (central limit theorem).
+In statistical inference the same fact gives the standard error sigma/sqrt(n) of the mean: confidence intervals shrink like 1/sqrt(n), so four times more data halve their width,
+as measured in HW3 and HW4. Independence is what makes this work: with positively correlated data the covariances add up and the variance of the mean decreases more slowly
+(with n identical copies it does not decrease at all), so formulas that assume sqrt(n) would be too optimistic.</p>
+<p>Ex. 2, conditional probability. In probability theory P(A | B) = P(A and B) / P(B) is the probability of A in the restricted world where B happened;
+it gives the multiplication rule P(A and B) = P(A | B) P(B), the law of total probability P(A) = sum of P(A | B_i) P(B_i), and the definition of independence, P(A | B) = P(A).
+In statistics conditioning is how data enter: relative frequencies within a group (the conditional tables of HW6) estimate conditional probabilities,
+and every model gives the probability of the data given the parameters, P(x | theta). Frequentist inference keeps theta fixed and studies the data given theta;
+Bayesian inference also conditions in the other direction, on the observed data, and gives P(theta | x).</p>
+<p>Ex. 2, prior, likelihood and posterior. The prior P(theta) is the distribution of the unknown quantity before seeing the data.
+The likelihood L(theta) = P(x | theta) is the probability of the observed data for each possible value of theta, read as a function of theta (it is not a distribution over theta).
+The posterior P(theta | x) is the distribution of theta after the data. Bayes' theorem connects them: posterior = likelihood * prior / P(x),
+so the posterior is proportional to likelihood times prior, and the evidence P(x) only makes it sum or integrate to 1.
+Values of theta that are plausible a priori and also explain the data well get a high posterior probability.</p>
+<p>Ex. 2, why updating is central. The posterior summarises everything the data say about theta, given the model and the prior, and it is used directly:
+point estimates (posterior mean), credible intervals, probabilities of hypotheses and decisions. When new independent data arrive, the current posterior becomes the new prior
+and Bayes' theorem is applied again, which gives the same result as using all the data at once. Section 1 does exactly this: with a base rate of 1%, a detection rate of 99%
+and 5% false alarms, the probability of an attack goes from 0.01 to 0.1667 after one alarm, 0.7984 after two and 0.9874 after three.
+As data accumulate the likelihood dominates, and the posterior concentrates around the values supported by the data for any reasonable prior.</p>
+<p>Ex. 2, examples, advantages and limitations. The alarm of section 1 shows the influence of the prior: even a very accurate detector gives only a 16.7% probability of attack
+after one alarm, because attacks are rare (the base rate fallacy); the same reasoning is used in spam filters, medical tests and fraud detection.
+Section 2 estimates the success probability theta of an attack from k = 3 successes in n = 20 attempts. The likelihood alone has its maximum at 0.15;
+with a flat prior Beta(1, 1) the posterior mean is 0.1818 with 95% interval [0.0544, 0.3634]; with the prior Beta(2, 18), which encodes previous experience of about 10% successes,
+the posterior mean is 0.125 with interval [0.0429, 0.2421]. With few data the prior changes the conclusion noticeably, while a larger n brings the two posteriors closer.
+The advantages are that prior knowledge is used explicitly, that the result is a probability statement about theta, that it works with small samples and updates naturally with new data.
+The limitations are that the prior can be subjective and a wrong prior biases the results when data are few, that the likelihood model must be correct,
+and that outside simple cases like the Beta-binomial the posterior needs numerical methods such as Monte Carlo sampling.</p>`,
+    errSize: 'N must be between 10 and 1e5, m between 10 and 1e4, and N*m at most 2e7',
+    tailC: 'with a 1 after n',
+    theory: 'theory',
+    tailTitle: N => `fraction of sequences with a 1 between n and N = ${N}, against n`,
+    s1: 'p_n = 1/n',
+    s2: 'p_n = 1/n^2',
+    s3: 'P(X_n = 1) = 1/n',
+    errProb: 'the probabilities must be strictly between 0 and 1, and the alarms between 1 and 20',
+    alarmCol: 'alarm',
+    before: 'P(A) before',
+    pAl: 'P(alarm)',
+    after: 'P(A) after',
+    noAlarm: v => `with no alarm instead:  P(A | no alarm) = ${v}`,
+    errBeta: 'a and b must be positive (at most 1e4), n between 1 and 1e5 and k between 0 and n',
+    prior: (a, b, m) => `prior        Beta(${a}, ${b}),  mean ${m}`,
+    mle: (k, n, v) => `likelihood   k = ${k} of n = ${n},  maximum at k/n = ${v}`,
+    post: (a, b, m, lo, hi) => `posterior    Beta(${a}, ${b}),  mean ${m},  95% interval [${lo}, ${hi}]`,
+    flat: (a, b, m, lo, hi) => `flat prior   Beta(1, 1) gives Beta(${a}, ${b}),  mean ${m},  95% interval [${lo}, ${hi}]`,
+    densTitle: 'densities of theta',
+    dPost: 'posterior',
+    dLik: 'likelihood',
+    dPrior: 'prior'
   }
 },
 it: {
@@ -1210,6 +1313,109 @@ delle altre variabili. La dipendenza statistica è necessaria per un effetto cau
     expT: 'frequenze attese E_ij',
     contT: 'contributi (n_ij - E_ij)^2 / E_ij',
     barsTitle: 'f(F | X) per ogni valore di X, e la marginale di F'
+  },
+  hw7: {
+    title: 'HW7 - convergenza e Bayes',
+    dl: 'scarica',
+    h1: 'HW7 - modi di convergenza, probabilità condizionata e teorema di Bayes',
+    hEx1: 'Ex. 1 - modi di convergenza nella teoria della probabilità',
+    defs: `<p>Siano X_1, X_2, ... e X variabili aleatorie definite sullo stesso spazio di probabilità. I quattro principali modi di convergenza di X_n a X sono:</p>
+<pre>quasi certa (q.c.)        P(lim X_n = X) = 1
+in probabilità            per ogni e > 0:  P(|X_n - X| > e) -> 0
+in media quadratica (L^2) E[(X_n - X)^2] -> 0
+in distribuzione          F_n(x) -> F(x) in ogni punto x in cui F è continua
+
+relazioni                 q.c.  => in probabilità => in distribuzione
+                          L^2   => in probabilità  (Chebyshev: P(|X_n - X| > e) <= E[(X_n - X)^2] / e^2)
+                          in distribuzione a una costante c => in probabilità a c</pre>`,
+    hBc: '1. in probabilità ma non quasi certamente',
+    bcNote: 'X_1, X_2, ... sono indipendenti, X_n = 1 con probabilità p_n e 0 altrimenti. Poiché P(X_n = 1) = p_n -> 0 (linea blu), X_n -> 0 in probabilità, e anche in media quadratica perché E[X_n^2] = p_n. La convergenza quasi certa richiede che, in quasi ogni successione, tutti i valori siano 0 da un certo indice in poi. Per i lemmi di Borel-Cantelli questo succede con probabilità 1 se la somma dei p_n è finita (p_n = 1/n^2, rosso) e con probabilità 0 se è infinita (p_n = 1/n, nero). La tabella e il grafico danno, per ogni n, la frazione delle m successioni simulate che hanno ancora un 1 tra n e N (punti) e il suo valore esatto (linee).',
+    run: 'esegui',
+    hEx2: 'Ex. 2 - probabilità condizionata, teorema di Bayes e inferenza statistica',
+    bayes: `<p>Probabilità condizionata: P(A | B) = P(A e B) / P(B), per P(B) > 0. Scrivendo P(A e B) nei due modi possibili si ottiene il teorema di Bayes,
+qui per una quantità ignota theta e i dati osservati x:</p>
+<pre>P(theta | x) = P(x | theta) P(theta) / P(x),     P(x) = somma (o integrale) su theta di P(x | theta) P(theta)
+posterior    = verosimiglianza * prior / evidenza</pre>`,
+    hAlarm: '1. un esempio discreto: un allarme di intrusione',
+    alarmNote: "A = è in corso un attacco. La prior P(A) è il tasso di base degli attacchi; la verosimiglianza è data dal tasso di rilevamento P(allarme | A) e dal tasso di falsi allarmi P(allarme | non A). La tabella applica il teorema di Bayes dopo ogni allarme, usando la posterior di un passo come prior del successivo (allarmi indipendenti dato A o non A).",
+    priorL: 'prior P(A)',
+    sensL: 'P(allarme | A)',
+    fprL: 'P(allarme | non A)',
+    kL: 'allarmi',
+    hBeta: '2. un esempio continuo: prior Beta e verosimiglianza binomiale',
+    betaNote: "theta = probabilità che un attacco a un sistema riesca. Prior Beta(a, b), con media a/(a+b); dati: k successi in n attacchi, con verosimiglianza binomiale proporzionale a theta^k (1-theta)^(n-k); la posterior è ancora una Beta, Beta(a + k, b + n - k). L'intervallo è l'intervallo di credibilità centrale al 95%. Grafico: nero posterior, rosso verosimiglianza (normalizzata ad area 1), blu prior.",
+    dataL: 'dati:',
+    notesH: 'note',
+    notes: `<p>Ex. 1, differenze tra i modi. La convergenza quasi certa riguarda le singole successioni: con probabilità 1 la successione di numeri X_n(omega) converge a X(omega).
+La convergenza in probabilità chiede solo che, per ogni n grande fissato, uno scarto |X_n - X| > e sia improbabile; scarti grandi e rari possono continuare a comparire per n diversi, quindi è più debole.
+La convergenza in media quadratica chiede che la distanza quadratica media E[(X_n - X)^2] tenda a 0; per la disuguaglianza di Chebyshev implica la convergenza in probabilità,
+ma richiede momenti secondi finiti e non è implicata dalla convergenza quasi certa (X_n = n con probabilità 1/n^2 e 0 altrimenti tende a 0 quasi certamente, ma E[X_n^2] = 1).
+La convergenza in distribuzione riguarda solo le funzioni di ripartizione, non i valori: se Z è N(0,1), la successione X_n = -Z converge in distribuzione a Z,
+anche se |X_n - Z| = 2|Z| non diventa mai piccolo. Quindi la convergenza quasi certa e quella in media quadratica implicano ciascuna la convergenza in probabilità, che implica quella in distribuzione,
+e in generale le implicazioni inverse sono false. La sezione 1 mostra una successione che converge in probabilità e in media quadratica ma non quasi certamente:
+con p_n = 1/n la frazione di successioni che hanno ancora un 1 dopo n = 1000 è 0.898 (valore esatto 0.900 con N = 10000, e tende a 1 al crescere di N),
+mentre con p_n = 1/n^2 è già 0.097 dopo n = 10 e 0.007 dopo n = 100.</p>
+<p>Ex. 1, ruolo nella LGN, nel TLC e in altri risultati. Per X_i i.i.d. con media mu, la legge debole dei grandi numeri afferma che la media campionaria S_n/n converge a mu in probabilità;
+quando la varianza sigma^2 è finita segue da E[(S_n/n - mu)^2] = sigma^2/n, quindi la convergenza è anche in media quadratica.
+La legge forte (Kolmogorov) afferma la convergenza quasi certa e richiede solo E|X| finito: quasi ogni singola successione di medie si stabilizza su mu,
+ed è questo che giustifica la stima di mu da un solo campione lungo, come negli HW3 e HW4.
+Il teorema del limite centrale è un enunciato in distribuzione: (S_n - n mu) / (sigma sqrt(n)) converge in distribuzione a N(0, 1), e non converge in probabilità,
+perché la somma standardizzata continua a fluttuare con varianza 1 invece di stabilizzarsi su un valore.
+Altri risultati usano gli stessi modi: la consistenza di uno stimatore è la convergenza in probabilità al vero parametro, il teorema di Glivenko-Cantelli dà la convergenza quasi certa
+e uniforme della funzione di ripartizione empirica, e la normalità asintotica degli stimatori, il teorema di Slutsky e il metodo delta sono enunciati in distribuzione,
+ed è questo che usano gli intervalli di confidenza e i test.</p>
+<p>Ex. 1, perché sqrt(n). Per una somma S_n = X_1 + ... + X_n, Var(S_n) è la somma delle varianze più due volte la somma delle covarianze.
+Se le X_i sono indipendenti, o anche solo incorrelate, le covarianze sono 0 e le varianze si sommano: Var(S_n) = n sigma^2, quindi la deviazione standard della somma cresce come sqrt(n), non come n.
+Dividendo per n si ottiene Var(S_n/n) = sigma^2/n, che tende a 0 (legge dei grandi numeri); dividendo per sqrt(n) si ottiene una varianza che resta sigma^2,
+l'unica scala in cui può esistere un limite non degenere (teorema del limite centrale).
+Nell'inferenza statistica lo stesso fatto dà l'errore standard sigma/sqrt(n) della media: gli intervalli di confidenza si restringono come 1/sqrt(n), quindi con il quadruplo dei dati la loro ampiezza si dimezza,
+come misurato negli HW3 e HW4. È l'indipendenza che fa funzionare tutto questo: con dati correlati positivamente le covarianze si sommano e la varianza della media cala più lentamente
+(con n copie identiche non cala affatto), quindi le formule che assumono sqrt(n) sarebbero troppo ottimiste.</p>
+<p>Ex. 2, probabilità condizionata. Nella teoria della probabilità P(A | B) = P(A e B) / P(B) è la probabilità di A nel mondo ristretto in cui B è avvenuto;
+da essa seguono la regola del prodotto P(A e B) = P(A | B) P(B), la legge della probabilità totale P(A) = somma di P(A | B_i) P(B_i) e la definizione di indipendenza, P(A | B) = P(A).
+In statistica il condizionamento è il modo in cui entrano i dati: le frequenze relative all'interno di un gruppo (le tabelle condizionate dell'HW6) stimano probabilità condizionate,
+e ogni modello dà la probabilità dei dati dati i parametri, P(x | theta). L'inferenza frequentista tiene theta fisso e studia i dati dato theta;
+l'inferenza bayesiana condiziona anche nell'altra direzione, sui dati osservati, e dà P(theta | x).</p>
+<p>Ex. 2, prior, verosimiglianza e posterior. La prior P(theta) è la distribuzione della quantità ignota prima di vedere i dati.
+La verosimiglianza L(theta) = P(x | theta) è la probabilità dei dati osservati per ogni possibile valore di theta, letta come funzione di theta (non è una distribuzione su theta).
+La posterior P(theta | x) è la distribuzione di theta dopo i dati. Il teorema di Bayes le collega: posterior = verosimiglianza * prior / P(x),
+quindi la posterior è proporzionale a verosimiglianza per prior, e l'evidenza P(x) serve solo a farla sommare o integrare a 1.
+I valori di theta plausibili a priori e che spiegano bene i dati ricevono una probabilità a posteriori alta.</p>
+<p>Ex. 2, perché l'aggiornamento è centrale. La posterior riassume tutto quello che i dati dicono su theta, dati il modello e la prior, e si usa direttamente:
+stime puntuali (media a posteriori), intervalli di credibilità, probabilità di ipotesi e decisioni. Quando arrivano nuovi dati indipendenti, la posterior attuale diventa la nuova prior
+e si applica di nuovo il teorema di Bayes, con lo stesso risultato che si avrebbe usando tutti i dati insieme. La sezione 1 fa proprio questo: con un tasso di base dell'1%, un tasso di rilevamento del 99%
+e il 5% di falsi allarmi, la probabilità di attacco passa da 0.01 a 0.1667 dopo un allarme, 0.7984 dopo due e 0.9874 dopo tre.
+Man mano che i dati si accumulano la verosimiglianza prevale, e la posterior si concentra attorno ai valori sostenuti dai dati per qualsiasi prior ragionevole.</p>
+<p>Ex. 2, esempi, vantaggi e limiti. L'allarme della sezione 1 mostra l'influenza della prior: anche un rilevatore molto accurato dà solo il 16.7% di probabilità di attacco
+dopo un allarme, perché gli attacchi sono rari (la fallacia del tasso di base); lo stesso ragionamento si usa nei filtri antispam, nei test medici e nel rilevamento delle frodi.
+La sezione 2 stima la probabilità di successo theta di un attacco da k = 3 successi su n = 20 tentativi. La verosimiglianza da sola ha il massimo in 0.15;
+con una prior piatta Beta(1, 1) la media a posteriori è 0.1818 con intervallo al 95% [0.0544, 0.3634]; con la prior Beta(2, 18), che rappresenta un'esperienza precedente di circa il 10% di successi,
+la media a posteriori è 0.125 con intervallo [0.0429, 0.2421]. Con pochi dati la prior cambia in modo evidente la conclusione, mentre con n più grande le due posterior si avvicinano.
+I vantaggi sono che la conoscenza a priori si usa in modo esplicito, che il risultato è un'affermazione di probabilità su theta, che funziona con campioni piccoli e si aggiorna in modo naturale con nuovi dati.
+I limiti sono che la prior può essere soggettiva e una prior sbagliata distorce i risultati quando i dati sono pochi, che il modello di verosimiglianza deve essere corretto,
+e che al di fuori di casi semplici come il Beta-binomiale la posterior richiede metodi numerici come il campionamento Monte Carlo.</p>`,
+    errSize: 'N deve essere tra 10 e 1e5, m tra 10 e 1e4, e N*m al massimo 2e7',
+    tailC: 'con un 1 dopo n',
+    theory: 'teoria',
+    tailTitle: N => `frazione di successioni con un 1 tra n e N = ${N}, in funzione di n`,
+    s1: 'p_n = 1/n',
+    s2: 'p_n = 1/n^2',
+    s3: 'P(X_n = 1) = 1/n',
+    errProb: 'le probabilità devono essere strettamente tra 0 e 1, e gli allarmi tra 1 e 20',
+    alarmCol: 'allarme',
+    before: 'P(A) prima',
+    pAl: 'P(allarme)',
+    after: 'P(A) dopo',
+    noAlarm: v => `se invece non c'è allarme:  P(A | nessun allarme) = ${v}`,
+    errBeta: 'a e b devono essere positivi (al massimo 1e4), n tra 1 e 1e5 e k tra 0 e n',
+    prior: (a, b, m) => `prior            Beta(${a}, ${b}),  media ${m}`,
+    mle: (k, n, v) => `verosimiglianza  k = ${k} su n = ${n},  massimo in k/n = ${v}`,
+    post: (a, b, m, lo, hi) => `posterior        Beta(${a}, ${b}),  media ${m},  intervallo al 95% [${lo}, ${hi}]`,
+    flat: (a, b, m, lo, hi) => `prior piatta     Beta(1, 1) dà Beta(${a}, ${b}),  media ${m},  intervallo al 95% [${lo}, ${hi}]`,
+    densTitle: 'densità di theta',
+    dPost: 'posterior',
+    dLik: 'verosimiglianza',
+    dPrior: 'prior'
   }
 }
 }

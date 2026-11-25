@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>HW7</title>
+<style>
+body{font:14px monospace;max-width:960px;margin:1em auto;padding:0 1em}
+input{width:4em}
+pre{white-space:pre-wrap}
+canvas{border:1px solid #aaa;max-width:100%;height:auto;margin:2px}
+</style>
+<script src="../localisation.js"></script>
+
+<p><a href="../hw1/">HW1</a> | <a href="../hw2/">HW2</a> | <a href="../hw2-b/">HW2-B</a> | <a href="../hw3/">HW3</a> | <a href="../hw4/">HW4</a> | <a href="../hw5/">HW5</a> | <a href="../hw6/">HW6</a> | <a href="../hw7/">HW7</a> |
+<select id=lang><option value=en>ENG</option><option value=it>ITA</option></select>
+<button id=dl data-t=dl></button></p>
+
+<h3 data-t=h1></h3>
+
+<h3 data-t=hEx1></h3>
+<div data-t=defs></div>
+
+<h3 data-t=hBc></h3>
+<p data-t=bcNote></p>
+<p>N <input id=N value=10000> m <input id=m value=1000> seed <input id=seed value=1> <button id=run1 data-t=run></button></p>
+<pre id=out1></pre>
+<canvas id=tail width=620 height=200></canvas>
+
+<h3 data-t=hEx2></h3>
+<div data-t=bayes></div>
+
+<h3 data-t=hAlarm></h3>
+<p data-t=alarmNote></p>
+<p><span data-t=priorL></span> <input id=pa value=0.01> <span data-t=sensL></span> <input id=se value=0.99> <span data-t=fprL></span> <input id=fp value=0.05>
+<span data-t=kL></span> <input id=ka value=3> <button id=run2 data-t=run></button></p>
+<pre id=out2></pre>
+
+<h3 data-t=hBeta></h3>
+<p data-t=betaNote></p>
+<p>prior Beta(a, b): a <input id=a value=2> b <input id=b value=18> <span data-t=dataL></span> k <input id=k value=3> n <input id=n value=20> <button id=run3 data-t=run></button></p>
+<pre id=out3></pre>
+<canvas id=dens width=620 height=200></canvas>
+
+<h3 data-t=notesH></h3>
+<div data-t=notes></div>
+
+<script>
+const $ = id => document.getElementById(id)
+
+let lang = 'en'
+try { lang = localStorage.getItem('lang') || 'en' } catch (e) {}
+const tr = () => LOC[lang].hw7
+
+function texts() {
+  document.documentElement.lang = lang
+  document.title = tr().title
+  $('lang').value = lang
+  document.querySelectorAll('[data-t]').forEach(e => e.innerHTML = tr()[e.dataset.t])
+}
+
+// outputs and charts are kept as functions of the text, so they can be redrawn in the other language
+const out = {}, charts = {}
+const show = id => $(id).textContent = (out[id] || []).map(f => typeof f == 'function' ? f(tr()) : f).join('\n')
+const put = (id, lines) => { out[id] = lines; show(id) }
+const keep = (id, f) => { charts[id] = f; f(tr()) }
+
+function rng(a) {
+  return () => {
+    a = a + 0x6D2B79F5 | 0
+    let t = Math.imul(a ^ a >>> 15, 1 | a)
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t
+    return ((t ^ t >>> 14) >>> 0) / 4294967296
+  }
+}
+
+// curves on a log x axis (lin: linear x axis), y from lo to hi; series with dot: 1 are drawn as dots
+function plot(id, title, xs, series, lo, hi, lin) {
+  const c = $(id), g = c.getContext('2d'), x0 = 46, H = c.height - 34, W = c.width - x0 - 8
+  const tx = lin ? v => v : Math.log, xa = tx(xs[0]), xb = tx(xs[xs.length - 1])
+  const X = v => x0 + (tx(v) - xa) / (xb - xa) * W, Y = v => 18 + H - Math.max(0, Math.min(1, (v - lo) / (hi - lo))) * H
+  g.clearRect(0, 0, c.width, c.height); g.font = '11px monospace'
+  g.fillStyle = '#000'; g.fillText(title, 3, 12)
+  g.strokeStyle = '#ccc'; g.strokeRect(x0, 18, W, H)
+  g.fillText(+hi.toFixed(2), 2, 24); g.fillText(+lo.toFixed(2), 2, 18 + H)
+  g.fillText(+xs[0].toFixed(2), x0, 18 + H + 12); g.fillText(+xs[xs.length - 1].toFixed(2), c.width - 38, 18 + H + 12)
+  let li = 0
+  series.forEach(s => {
+    g.strokeStyle = g.fillStyle = s.color
+    if (s.dot) s.v.forEach((y, i) => g.fillRect(X(xs[i]) - 1.5, Y(y) - 1.5, 3, 3))
+    else { g.beginPath(); s.v.forEach((y, i) => i ? g.lineTo(X(xs[i]), Y(y)) : g.moveTo(X(xs[i]), Y(y))); g.stroke() }
+    if (s.name) g.fillText(s.name, c.width - 300, 18 + H * .4 + li++ * 12)
+  })
+}
+
+const sizes = (a, b, k) => [...new Set(Array.from({ length: k }, (_, i) => Math.round(a * (b / a) ** (i / (k - 1)))))]
+const f4 = v => v.toFixed(4)
+
+// ex. 1: independent X_n with P(X_n = 1) = p_n; a sequence still has a 1 after n when its last 1 is at an index >= n
+function ex1() {
+  const N = Math.round(+$('N').value), m = Math.round(+$('m').value)
+  if (!(N >= 10 && N <= 100000 && m >= 10 && m <= 10000 && N * m <= 2e7)) return put('out1', [t => t.errSize])
+  const r = rng(Math.round(+$('seed').value) || 1)
+  const last = [new Int32Array(m), new Int32Array(m)]
+  for (let j = 0; j < m; j++) for (let k = 1; k <= N; k++) {
+    if (r() < 1 / k) last[0][j] = k
+    if (r() < 1 / (k * k)) last[1][j] = k
+  }
+  const frac = (s, n) => { let c = 0; for (const v of last[s]) if (v >= n) c++; return c / m }
+  // exact probability of at least one 1 in [n, N]
+  const th = [n => n < 2 ? 1 : 1 - (n - 1) / N, n => n < 2 ? 1 : 1 - (n - 1) * (N + 1) / (n * N)]
+  const ns = [2, 10, 100, 1000].filter(n => n < N)
+  put('out1', [
+    t => '     n' + '   p_n = 1/n'.padStart(14) + t.tailC.padStart(18) + t.theory.padStart(10) + '   p_n = 1/n^2'.padStart(16) + t.tailC.padStart(18) + t.theory.padStart(10),
+    ...ns.map(n => String(n).padStart(6) + f4(1 / n).padStart(14) + f4(frac(0, n)).padStart(18) + f4(th[0](n)).padStart(10) + f4(1 / n / n).padStart(16) + f4(frac(1, n)).padStart(18) + f4(th[1](n)).padStart(10))
+  ])
+  const xs = sizes(1, N, 40)
+  keep('tail', t => plot('tail', t.tailTitle(N), xs, [
+    { v: xs.map(n => frac(0, n)), color: '#000', name: t.s1, dot: 1 }, { v: xs.map(th[0]), color: '#000' },
+    { v: xs.map(n => frac(1, n)), color: 'red', name: t.s2, dot: 1 }, { v: xs.map(th[1]), color: 'red' },
+    { v: xs.map(n => 1 / n), color: 'blue', name: t.s3 }], 0, 1))
+}
+
+// ex. 2, discrete example: posterior after each alarm becomes the prior for the next one
+function ex2a() {
+  const pa = +$('pa').value, se = +$('se').value, fp = +$('fp').value, k = Math.round(+$('ka').value)
+  const ok = v => v > 0 && v < 1
+  if (!(ok(pa) && ok(se) && ok(fp) && k >= 1 && k <= 20)) return put('out2', [t => t.errProb])
+  const rows = []
+  let p = pa
+  for (let j = 1; j <= k; j++) {
+    const ev = p * se + (1 - p) * fp, post = p * se / ev
+    rows.push([j, p, ev, post])
+    p = post
+  }
+  const noAl = pa * (1 - se) / (pa * (1 - se) + (1 - pa) * (1 - fp))
+  put('out2', [
+    t => t.alarmCol.padStart(8) + t.before.padStart(14) + t.pAl.padStart(14) + t.after.padStart(16),
+    ...rows.map(([j, pr, ev, po]) => String(j).padStart(8) + f4(pr).padStart(14) + f4(ev).padStart(14) + f4(po).padStart(16)),
+    '',
+    t => t.noAlarm(noAl.toExponential(2))
+  ])
+}
+
+// ex. 2, continuous example: Beta(a, b) prior, binomial likelihood, Beta(a + k, b + n - k) posterior
+function ex2b() {
+  const a = +$('a').value, b = +$('b').value, k = Math.round(+$('k').value), n = Math.round(+$('n').value)
+  if (!(a > 0 && b > 0 && a <= 1e4 && b <= 1e4 && n >= 1 && n <= 1e5 && k >= 0 && k <= n)) return put('out3', [t => t.errBeta])
+  const G = 4000, xs = Array.from({ length: G }, (_, i) => (i + .5) / G)
+  // densities on a grid, normalised numerically
+  const dens = (p, q) => {
+    const lv = xs.map(x => (p - 1) * Math.log(x) + (q - 1) * Math.log(1 - x)), mx = Math.max(...lv)
+    const v = lv.map(l => Math.exp(l - mx)), s = v.reduce((u, w) => u + w, 0) / G
+    return v.map(w => w / s)
+  }
+  const ci = d => {
+    let c = 0, lo = 0, hi = 1
+    for (let i = 0; i < G; i++) { const c2 = c + d[i] / G; if (c < .025 && c2 >= .025) lo = xs[i]; if (c < .975 && c2 >= .975) hi = xs[i]; c = c2 }
+    return [lo, hi]
+  }
+  const prior = dens(a, b), lik = dens(k + 1, n - k + 1), post = dens(a + k, b + n - k), flat = dens(1 + k, 1 + n - k)
+  const pm = (a + k) / (a + b + n), fm = (1 + k) / (2 + n), [l1, h1] = ci(post), [l2, h2] = ci(flat)
+  put('out3', [
+    t => t.prior(a, b, f4(a / (a + b))),
+    t => t.mle(k, n, f4(k / n)),
+    t => t.post(+(a + k).toFixed(4), +(b + n - k).toFixed(4), f4(pm), f4(l1), f4(h1)),
+    t => t.flat(1 + k, 1 + n - k, f4(fm), f4(l2), f4(h2))
+  ])
+  const top = Math.max(...prior, ...lik, ...post) * 1.15
+  keep('dens', t => plot('dens', t.densTitle, xs, [
+    { v: post, color: '#000', name: t.dPost }, { v: lik, color: 'red', name: t.dLik }, { v: prior, color: 'blue', name: t.dPrior }], 0, top, 1))
+}
+
+$('lang').onchange = () => {
+  lang = $('lang').value
+  try { localStorage.setItem('lang', lang) } catch (e) {}
+  texts()
+  Object.keys(out).forEach(show)
+  Object.values(charts).forEach(f => f(tr()))
+}
+// the downloaded page loads localisation.js from its own folder
+$('dl').onclick = async () => {
+  const save = (blob, name) => { const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = name; l.click() }
+  const page = (await (await fetch(location.href)).text()).replace('../localisation.js', 'localisation.js')
+  save(new Blob([page], {type: 'text/html'}), 'hw7.html')
+  save(await (await fetch('../localisation.js')).blob(), 'localisation.js')
+}
+
+for (const id of ['N', 'm', 'seed']) $(id).onchange = ex1
+$('run1').onclick = ex1
+for (const id of ['pa', 'se', 'fp', 'ka']) $(id).onchange = ex2a
+$('run2').onclick = ex2a
+for (const id of ['a', 'b', 'k', 'n']) $(id).onchange = ex2b
+$('run3').onclick = ex2b
+texts()
+ex1()
+ex2a()
+ex2b()
+</script>
